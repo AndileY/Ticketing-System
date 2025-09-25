@@ -1,0 +1,51 @@
+﻿@page "/consumebleitem/details/{Id:int}"
+@inject IClient Client
+@inject NavigationManager NavigationManager
+
+<h3>Consumable Item Details</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (item == null)
+{
+    <p><em>Loading item...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Name</dt>
+        <dd class="col-sm-9">@item.Name</dd>
+
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">@item.Description</dd>
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="GoBack">Back to List</button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ConsumebleItemDetailsDto? item;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            item = await Client.ConsumebleItemGETAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load item: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/consumebleitem");
+    }
+}
+

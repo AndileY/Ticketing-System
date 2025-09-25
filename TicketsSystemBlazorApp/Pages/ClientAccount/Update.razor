@@ -1,0 +1,191 @@
+﻿@page "/clientaccount/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorage
+
+
+
+<h3>Update Client Account</h3>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (clientAccount != null)
+{
+    <EditForm Model="clientAccount" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group mb-2">
+            <label>First Name</label>
+            <InputText @bind-Value="clientAccount.FirstName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Last Name</label>
+            <InputText @bind-Value="clientAccount.LastName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Company ID</label>
+            <InputNumber @bind-Value="clientAccount.CompanyId" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Email</label>
+            <InputText @bind-Value="clientAccount.Email" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Telephone</label>
+            <InputText @bind-Value="clientAccount.Telephone" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Address</label>
+            <InputText @bind-Value="clientAccount.Address" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>QuickBooks UID</label>
+            <InputText @bind-Value="clientAccount.QuickBooksUid" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>SLA</label>
+            <InputNumber @bind-Value="clientAccount.Slaid" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update</button>
+        <button class="btn btn-secondary ms-2" @onclick="GoBack">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ClientAccountUpdateDto? clientAccount;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? successMessage;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 1️⃣ Get token from local storage
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                ClientService.HttpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            else
+            {
+                errorMessage = "❌ No auth token found. Please login again.";
+                isLoading = false;
+                return;
+            }
+
+            // 2️⃣ Load client account details
+            var details = await ClientService.ClientAccountGETAsync(Id);
+
+            clientAccount = new ClientAccountUpdateDto
+                {
+                    FirstName = details.FirstName,
+                    LastName = details.LastName,
+                    CompanyId = details.CompanyId,
+                    Email = details.Email,
+                    Telephone = details.Telephone,
+                    Address = details.Address,
+                    QuickBooksUid = details.QuickBooksUid,
+                    Slaid = details.Slaid
+                };
+        }
+        catch (ApiException apiEx)
+        {
+            // 3️⃣ Log HTTP response for debugging
+            Console.WriteLine($"Status: {apiEx.StatusCode}");
+            Console.WriteLine($"Response: {apiEx.Response}");
+
+            errorMessage = $"Failed to load client account: {apiEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private async Task HandleUpdate()
+    {
+        try
+        {
+            // 1️⃣ Attach the token to the NSwag client
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                ClientService.HttpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            else
+            {
+                errorMessage = "❌ No auth token found. Please login again.";
+                return;
+            }
+
+            // 2️⃣ Call the NSwag-generated update method
+            await ClientService.ClientAccountPUTAsync(Id, clientAccount, CancellationToken.None);
+
+            // 3️⃣ Show success message
+            successMessage = "✅ Successfully updated client account.";
+            errorMessage = null;
+
+            // 4️⃣ Wait briefly and navigate back
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/clientaccount");
+        }
+        catch (ApiException apiEx)
+        {
+            // Log response for debugging
+            Console.WriteLine($"Status: {apiEx.StatusCode}");
+            Console.WriteLine($"Response: {apiEx.Response}");
+
+            errorMessage = $"❌ Failed to update client account: {apiEx.Message}";
+            successMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Unexpected error: {ex.Message}";
+            successMessage = null;
+        }
+    }
+
+
+
+
+  
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/clientaccount");
+    }
+}
+

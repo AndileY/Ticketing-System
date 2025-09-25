@@ -1,0 +1,35 @@
+﻿@page "/ticketstatus/create"
+@inject IClient ClientService
+@inject NavigationManager Nav
+
+<h3>Create Ticket Status</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleCreate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Status</label>
+        <InputText class="form-control" @bind-Value="model.Status" />
+    </div>
+
+    <div class="mb-3">
+        <label>Description</label>
+        <InputTextArea class="form-control" @bind-Value="model.Description" />
+    </div>
+
+    <button class="btn btn-success">Create</button>
+    <a class="btn btn-secondary ms-2" href="/ticketstatus">Cancel</a>
+</EditForm>
+
+@code {
+    private TicketStatusCreateDto model = new();
+
+    private async Task HandleCreate()
+    {
+        await ClientService.TicketStatusPOSTAsync(model);
+        Nav.NavigateTo("/ticketstatus");
+        StateHasChanged();
+    }
+}
+

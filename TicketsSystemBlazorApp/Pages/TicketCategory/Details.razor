@@ -1,0 +1,49 @@
+﻿@page "/ticketcategory/details/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Category Details</h3>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">ID</dt>
+        <dd class="col-sm-9">@model.TicketCategoryId</dd>
+
+        <dt class="col-sm-3">Name</dt>
+        <dd class="col-sm-9">@model.Name</dd>
+    </dl>
+
+    <h5>Associated Tickets:</h5>
+    @if (model.Tickets.Any())
+    {
+        <ul>
+            @foreach (var ticket in model.Tickets)
+            {
+                <li>@ticket.Title</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No tickets under this category.</p>
+    }
+
+    <a href="/ticketcategory" class="btn btn-secondary">Back</a>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TicketCategoryDetailsDto? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await ClientService.TicketCategoryGETAsync(Id);
+    }
+}

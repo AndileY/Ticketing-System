@@ -1,0 +1,95 @@
+﻿@page "/sla/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Create New SLA</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<EditForm Model="sla" OnValidSubmit="HandleCreate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label>Onsite Hours</label>
+        <InputNumber @bind-Value="sla.OnsiteHours" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Remote Hours</label>
+        <InputNumber @bind-Value="sla.RemoteHours" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Is Hardware Covered</label>
+        <InputCheckbox @bind-Value="sla.IsHardwareCovered" />
+    </div>
+
+    <div class="mb-2">
+        <label>Min Response Time (hh:mm:ss)</label>
+        <InputText @bind-Value="sla.MinResponseTime" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Min Resolved Time (hh:mm:ss)</label>
+        <InputText @bind-Value="sla.MinResolvedTime" class="form-control" />
+    </div>
+
+    <div class="mb-2">
+        <label>Warranty (Years)</label>
+        <InputNumber @bind-Value="sla.WarrantyTime" class="form-control" />
+    </div>
+
+
+    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">Create</button>
+    <button type="button" class="btn btn-success" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    private SlaCreateDto sla = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSubmitting = false;
+
+    private async Task HandleCreate()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (!TimeSpan.TryParse(sla.MinResponseTime, out _)
+           || !TimeSpan.TryParse(sla.MinResolvedTime, out _))
+        {
+            errorMessage = "Please enter valid time values for response/resolved time in hh:mm:ss format.";
+            return;
+        }
+
+        isSubmitting = true;
+
+        try
+        {
+            await ClientService.SLAPOSTAsync(sla);
+            
+
+            successMessage = "✅ SLA created successfully.";
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/sla");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to create SLA: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    void Cancel() => NavigationManager.NavigateTo("/sla");
+}

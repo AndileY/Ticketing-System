@@ -1,0 +1,66 @@
+﻿@page "/sla/details/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>SLA Details</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (sla == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Onsite Hours</dt>
+        <dd class="col-sm-9">@sla.OnsiteHours</dd>
+
+        <dt class="col-sm-3">Remote Hours</dt>
+        <dd class="col-sm-9">@sla.RemoteHours</dd>
+
+        <dt class="col-sm-3">Is Hardware Covered</dt>
+        <dd class="col-sm-9">@((sla.IsHardwareCovered) ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-3">Min Response Time</dt>
+        <dd class="col-sm-9">@sla.MinResponseTime</dd>
+
+        <dt class="col-sm-3">Min Resolved Time</dt>
+        <dd class="col-sm-9">@sla.MinResolvedTime</dd>
+
+        <dt class="col-sm-3">Warranty (Years)</dt>
+        <dd class="col-sm-9">@sla.WarrantyTime</dd>
+
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="NavigateBack">Back to List</button>
+
+
+    
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SlaDetailsDto? sla;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            sla = await ClientService.SLAGETAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Failed to load SLA details: {ex.Message}";
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/sla");
+    }
+}

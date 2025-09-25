@@ -1,0 +1,82 @@
+﻿@page "/ticketcategory"
+@inject IClient ClientService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h3>Ticket Categories</h3>
+
+<a class="btn btn-success mb-3" href="/ticketcategory/create">➕ Create New</a>
+
+@if (categories == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!categories.Any())
+{
+    <p><strong>No ticket categories found.</strong></p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cat in categories)
+            {
+                <tr>
+                    <td>@cat.TicketCategoryId</td>
+                    <td>@cat.Name</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary" href="/ticketcategory/update/@cat.TicketCategoryId">Edit</a>
+                        <a class="btn btn-sm btn-info ms-2" href="/ticketcategory/details/@cat.TicketCategoryId">Details</a>
+                        <button class="btn btn-sm btn-danger ms-2" @onclick="() => DeleteCategory(cat.TicketCategoryId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TicketCategoryReadOnlyDto>? categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            var result = await ClientService.TicketCategoryAllAsync();
+            categories = result.ToList();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Failed to load categories: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteCategory(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete category #{id}?");
+        if (!confirmed) return;
+
+        try
+        {
+            await ClientService.TicketCategoryDELETEAsync(id);
+            await LoadCategories(); // 🔄 Refresh list after delete
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting category: {ex.Message}");
+        }
+    }
+}

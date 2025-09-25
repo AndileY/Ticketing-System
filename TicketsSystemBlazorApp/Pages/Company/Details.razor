@@ -1,0 +1,41 @@
+﻿@page "/company/details/{id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+
+<h3>Company Details</h3>
+
+@if (company == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">@company.CompanyName</h5>
+        </div>
+    </div>
+    <p>
+        <a href="/company/update/@id" class="btn btn-warning">Edit</a>
+        <a href="/company" class="btn btn-secondary">Back</a>
+    </p>
+}
+
+@code {
+    private CompaniesDetailsDto? company;
+    [Parameter]
+    public int id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            company = await ClientService.CompaniesGETAsync(id);
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"Failed to load: {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,124 @@
+﻿@page "/approve-clients"
+@using TicketSystemWebApi.Models.ClientAccount;
+@inject ClientAccountService ClientAccountService
+@inject NavigationManager Navigation
+
+<h3>Approve New Clients</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (pendingClients.Count == 0)
+{
+    <div class="alert alert-info">✅ All clients are already approved.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in pendingClients)
+            {
+                <tr>
+                    <td>@client.FirstName @client.LastName</td>
+                    <td>@client.Email</td>
+                    <td>@client.CompanyName</td>
+                    <td>
+                        <button class="btn btn-sm btn-success"
+                        @onclick="() => ApproveClient(client.ClientAccountId)"
+                                disabled="@isProcessing">
+                            @(isProcessing ? "Approving..." : "Approve")
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success mt-3">@successMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private List<ClientAccountDto> pendingClients = new();
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingClients();
+    }
+
+    private async Task LoadPendingClients()
+    {
+        isLoading = true;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var allClients = await ClientAccountService.GetAll();
+            pendingClients = allClients
+                             .Where(c => !c.IsApproved)
+                             .Select(c => new ClientAccountDto
+                                 {
+                                     ClientAccountId = c.ClientAccountId,
+                                     FirstName = c.FirstName,
+                                     LastName = c.LastName,
+                                     Email = c.Email,
+                                     CompanyName = c.CompanyName,
+                                     IsApproved = c.IsApproved,
+                                     HasUserAccount = c.HasUserAccount
+                                 })
+                             .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to load clients: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveClient(int clientId)
+    {
+        isProcessing = true;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await ClientAccountService.ApproveClient(clientId);
+            successMessage = $"✅ Approved! Email: {result.Email}, Temporary Password: {result.TemporaryPassword}";
+
+            await LoadPendingClients(); // Refresh the pending clients list
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Approval failed: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

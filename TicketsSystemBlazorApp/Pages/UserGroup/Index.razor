@@ -1,0 +1,122 @@
+﻿@page "/usergroup"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3><i class="bi bi-people-fill"></i> User Groups</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="mb-3 d-flex justify-content-end">
+    <a href="/usergroup/create" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Create New Group
+    </a>
+</div>
+
+@if (groups == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark text-center">
+            <tr>
+                <th>ID</th>
+                <th>Group Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var group in groups)
+            {
+                <tr class="text-center align-middle">
+                    <td>@group.UserGroupId</td>
+                    <td>@group.GroupName</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="/usergroup/details/@group.UserGroupId" class="btn btn-outline-info btn-sm" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="/usergroup/update/@group.UserGroupId" class="btn btn-outline-warning btn-sm" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm" title="Delete" @onclick="() => ConfirmDelete(group.UserGroupId)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showConfirmation)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this user group?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showConfirmation = false">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteConfirmed">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserGroupReadOnlyDto>? groups;
+    private string? errorMessage;
+    private int selectedId;
+    private bool showConfirmation = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserGroups();
+    }
+
+    private async Task LoadUserGroups()
+    {
+        try
+        {
+            groups = (await ClientService.UserGroupsAllAsync()).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load user groups: {ex.Message}";
+        }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        selectedId = id;
+        showConfirmation = true;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        try
+        {
+            
+            await ClientService.UserGroupsDELETEAsync(selectedId);
+            showConfirmation = false;
+            await LoadUserGroups();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Delete failed: {ex.Message}";
+            showConfirmation = false;
+        }
+    }
+}
+

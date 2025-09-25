@@ -1,0 +1,45 @@
+﻿@page "/ticketcategory/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Create Ticket Category</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleCreate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="model.Name" />
+    </div>
+
+    <button class="btn btn-success" type="submit">Save</button>
+    <a href="/ticketcategory" class="btn btn-secondary ms-2">Cancel</a>
+</EditForm>
+
+@code {
+    private TicketCategoryCreateDto model = new();
+
+    private async Task HandleCreate()
+    {
+        try
+        {
+            await ClientService.TicketCategoryPOSTAsync(model);
+            NavigationManager.NavigateTo("/ticketcategory");
+        }
+        catch (ApiException ex)
+        {
+            if (ex.StatusCode == 201)
+            {
+                // Still OK, just created
+                NavigationManager.NavigateTo("/ticketcategory");
+            }
+            else
+            {
+                Console.WriteLine($"❌ API ERROR: {ex.StatusCode}");
+                throw;
+            }
+        }
+    }
+
+}

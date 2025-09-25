@@ -1,0 +1,108 @@
+﻿@page "/ticket"
+@using TicketsSystemBlazorApp.Service.Base
+@inject IClient TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<h3 class="text-2xl font-bold mb-4">Tickets</h3>
+
+@if (isLoading)
+{
+    <p>Loading tickets...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600 font-semibold">@errorMessage</div>
+}
+else if (tickets == null || !tickets.Any())
+{
+    <p class="text-gray-600">No tickets found.</p>
+}
+else
+{
+    <table class="table-auto border-collapse border border-gray-300 w-full">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="border p-2">ID</th>
+                <th class="border p-2">Title</th>
+                <th class="border p-2">Description</th>
+                <th class="border p-2">Category ID</th>
+                <th class="border p-2">Created At</th>
+                <th class="border p-2">Resolved At</th>
+                <th class="border p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in tickets)
+            {
+                <tr>
+                    <td class="border p-2">@t.TicketId</td>
+                    <td class="border p-2">@t.Title</td>
+                    <td class="border p-2">@t.Description</td>
+                    <td class="border p-2">@t.TicketCategoryId</td>
+                    <td class="border p-2">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="border p-2">@t.ResolvedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="border p-2">
+                        @if (isAdmin || isFirstLineSupport || isAssignee)
+                        {
+                            <button class="bg-blue-600 text-white px-2 py-1 rounded mr-2" @onclick="() => EditTicket(t.TicketId)">Edit</button>
+                        }
+                        <button class="bg-gray-600 text-white px-2 py-1 rounded" @onclick="() => ViewDetails(t.TicketId)">Details</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TicketReadOnlyDto> tickets = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? currentUserId;
+    private string? currentUserRole;
+    private bool isAdmin, isClient, isFirstLineSupport, isAssignee;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                errorMessage = "You must be logged in to view tickets.";
+                return;
+            }
+
+            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            currentUserRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+            isAdmin = currentUserRole == "Admin";
+            isClient = currentUserRole == "Client";
+            isFirstLineSupport = currentUserRole == "FirstLineSupport";
+            isAssignee = currentUserRole == "Assignee";
+
+            var allTickets = await TicketService.TicketAllAsync();
+
+            // Show only client tickets if role is Client
+            tickets = isClient
+                ? allTickets.Where(t => t.UserId == currentUserId).ToList()
+                : allTickets.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tickets: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void EditTicket(int id) => NavigationManager.NavigateTo($"/ticket/update/{id}");
+    private void ViewDetails(int id) => NavigationManager.NavigateTo($"/ticket/details/{id}");
+}
+
+

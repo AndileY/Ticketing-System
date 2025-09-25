@@ -1,0 +1,50 @@
+﻿@page "/consumebledused/details/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Consumebled Used Details</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">ID</dt>
+        <dd class="col-sm-9">@model.Id</dd>
+
+        <dt class="col-sm-3">Consumeble Item ID</dt>
+        <dd class="col-sm-9">@model.ConsumebleUsedId</dd>
+
+        <dt class="col-sm-3">Quantity</dt>
+        <dd class="col-sm-9">@model.Quantity</dd>
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="GoBack">Back</button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ConsumebledUsedDetailsDto? model;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            model = await ClientService.ConsumebledUsedGETAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load details: {ex.Message}";
+        }
+    }
+
+    private void GoBack() => NavigationManager.NavigateTo("/consumebledused");
+}

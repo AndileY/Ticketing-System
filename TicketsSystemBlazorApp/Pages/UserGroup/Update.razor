@@ -1,0 +1,92 @@
+﻿@page "/usergroup/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3><i class="bi bi-pencil-square"></i> Update User Group</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (group == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="group" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="groupName" class="form-label">Group Name</label>
+            <InputText id="groupName" @bind-Value="group.GroupName" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            <i class="bi bi-save"></i> Save Changes
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="GoBack">
+            <i class="bi bi-arrow-left-circle"></i> Cancel
+        </button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private UserGroupUpdateDto? group;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ClientService.UserGroupsGETAsync(Id);
+            group = new UserGroupUpdateDto
+                {
+                    GroupName = result.GroupName
+                };
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load group: {ex.Message}";
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isSubmitting = true;
+
+        try
+        {
+            await ClientService.UserGroupsPUTAsync(Id, group);
+            successMessage = "✅ Group updated successfully.";
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/usergroup");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Update failed: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/usergroup");
+    }
+}
+

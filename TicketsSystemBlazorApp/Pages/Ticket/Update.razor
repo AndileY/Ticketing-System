@@ -1,0 +1,221 @@
+﻿@page "/ticket/update/{Id:int}"
+@using TicketsSystemBlazorApp.Service.Base
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject IClient TicketService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-2xl font-bold mb-4">Update Ticket</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600 font-semibold">@errorMessage</div>
+}
+else if (ticket is null)
+{
+    <p class="text-gray-600">Ticket not found.</p>
+}
+else
+{
+    <EditForm Model="ticket" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <!-- Title -->
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Title</label>
+            <InputText @bind-Value="ticket.Title" class="border px-2 py-1 w-full" />
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Description</label>
+            <InputTextArea @bind-Value="ticket.Description" class="border px-2 py-1 w-full" />
+        </div>
+
+        <!-- Category -->
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Category</label>
+            <InputSelect @bind-Value="ticket.TicketCategoryId" class="border px-2 py-1 w-full">
+                <option value="">-- Select Category --</option>
+                @foreach (var c in categories)
+                {
+                    <option value="@c.Id">@c.Name</option>
+                }
+            </InputSelect>
+        </div>
+
+        <!-- Optional comments (only show if your API uses this on update) -->
+        @if (supportsComments)
+        {
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold">Comments</label>
+                <InputTextArea @bind-Value="ticket.Comments" class="border px-2 py-1 w-full" />
+            </div>
+        }
+
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded mr-2" disabled="@isSubmitting">
+            @(isSubmitting ? "Saving..." : "Save Changes")
+        </button>
+        <button type="button" class="bg-gray-600 text-white px-4 py-2 rounded" @onclick="Cancel" disabled="@isSubmitting">
+            Cancel
+        </button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailsDto? ticket;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    private string? currentUserId;
+    private string? currentUserRole;
+
+    // Simple category list; plug in your API where noted
+    private record CategoryItem(int Id, string Name);
+    private List<CategoryItem> categories = new();
+
+    // Set this to true only if your TicketUpdateDto includes "Comments"
+    private readonly bool supportsComments = false; // flip to true if applicable
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Auth
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!(user.Identity?.IsAuthenticated ?? false))
+            {
+                errorMessage = "You must be logged in to update tickets.";
+                return;
+            }
+
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            currentUserRole = user.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Load ticket
+            ticket = await TicketService.TicketGETAsync(Id);
+
+            if (ticket is null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+            // Enforce: Client can only edit their own ticket
+            if (string.Equals(currentUserRole, "Client", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(ticket.UserId, currentUserId, StringComparison.Ordinal))
+            {
+                errorMessage = "You are not authorized to edit this ticket.";
+                ticket = null;
+                return;
+            }
+
+            // Load categories (plug in your API here if you have one)
+            await LoadCategoriesAsync();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"API error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        categories.Clear();
+
+        // TODO: If you have an endpoint, replace this with your actual call.
+        // Example (adjust to your NSwag method names and DTOs):
+        //
+        // var apiCategories = await TicketService.TicketCategoryGETAsync();
+        // foreach (var c in apiCategories)
+        //     categories.Add(new CategoryItem(c.Id, c.Name));
+        //
+        // Temporary placeholder so the dropdown renders:
+        categories.AddRange(new[]
+        {
+            new CategoryItem(1, "Remote Support"),
+            new CategoryItem(2, "Onsite Support"),
+            new CategoryItem(3, "After Hour Remote Support"),
+            new CategoryItem(4, "After Hours Onsite Support"),
+            new CategoryItem(5, "Development"),
+            new CategoryItem(6, "Training"),
+            new CategoryItem(7, "Hardware"),
+            new CategoryItem(8, "Software"),
+            new CategoryItem(9, "Bug Report"),
+            new CategoryItem(10, "Suggestions"),
+            new CategoryItem(11, "Warranty / repair"),
+    });
+
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (ticket is null) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            // Map TicketDetailsDto → TicketUpdateDto (use only fields your UpdateDto actually has)
+            var updateDto = new TicketUpdateDto
+                {
+                    Title = ticket.Title,
+                    Description = ticket.Description,
+                    TicketCategoryId = ticket.TicketCategoryId,
+                    ResolvedAt = ticket.ResolvedAt,
+                    AssignToUserId = ticket.AssignToUserId,
+                    Comments = ticket.Comments,
+                    ClientAccountId = ticket.ClientAccountId,
+                    // If your UpdateDto also has Comments / AssignToUserId, you can add them here:
+                   
+                };
+
+            await TicketService.TicketPUTAsync(ticket.TicketId, updateDto);
+
+            // Navigate back to details (or list)
+            Navigation.NavigateTo($"/ticket/details/{ticket.TicketId}", forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Failed to update ticket: {ex.Response ?? ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        if (ticket is not null)
+            Navigation.NavigateTo($"/ticket/details/{ticket.TicketId}");
+        else
+            Navigation.NavigateTo("/ticket");
+    }
+}
+

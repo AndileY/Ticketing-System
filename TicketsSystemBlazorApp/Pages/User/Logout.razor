@@ -1,0 +1,11 @@
+﻿@page "/logout"
+@inject TicketsSystemBlazorApp.Service.Authentication.IAuthenticationService AuthService
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.LogoutAsync();
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+}

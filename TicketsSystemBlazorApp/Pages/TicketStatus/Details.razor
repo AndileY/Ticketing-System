@@ -1,0 +1,42 @@
+﻿@page "/ticketstatus/details/{Id:int}"
+@inject IClient ClientService
+
+<h3>Ticket Status Details</h3>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">ID</dt>
+        <dd class="col-sm-9">@model.TicketStatusId</dd>
+
+        <dt class="col-sm-3">Status</dt>
+        <dd class="col-sm-9">@model.Status</dd>
+
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">@model.Description</dd>
+
+        <dt class="col-sm-3">Created At</dt>
+    @*     <dd class="col-sm-9">@model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd> *@
+        <dd class="col-sm-9">@model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
+
+    </dl>
+
+    <a href="/ticketstatus" class="btn btn-secondary">Back</a>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TicketStatusDetailsDto? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await ClientService.TicketStatusGETAsync(Id);
+    }
+}
+

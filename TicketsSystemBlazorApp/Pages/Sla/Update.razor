@@ -1,0 +1,133 @@
+﻿@page "/sla/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Update SLA</h3>
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+
+@if (sla == null)
+{
+    <p><em>Loading SLA details...</em></p>
+}
+else
+{
+    <EditForm Model="sla" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label>Onsite Hours</label>
+            <InputNumber @bind-Value="sla.OnsiteHours" class="form-control" />
+        </div>
+
+        <div class="mb-2">
+            <label>Remote Hours</label>
+            <InputNumber @bind-Value="sla.RemoteHours" class="form-control" />
+        </div>
+
+        <div class="mb-2">
+            <label>Is Hardware Covered</label>
+            <InputCheckbox @bind-Value="sla.IsHardwareCovered" />
+        </div>
+
+        <div class="mb-2">
+            <label>Min Response Time (hh:mm:ss)</label>
+            <InputText @bind-Value="sla.MinResponseTime" class="form-control" />
+        </div>
+
+        <div class="mb-2">
+            <label>Min Resolved Time (hh:mm:ss)</label>
+            <InputText @bind-Value="sla.MinResolvedTime" class="form-control" />
+        </div>
+
+        <label>Warranty (Years)</label>
+        <InputNumber @bind-Value="sla.WarrantyTime" class="form-control" />
+
+
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">Update</button>
+        <button type="cancel" class="btn btn-primary" @onclick="GoBack">Cancel</button>
+      
+    </EditForm>
+
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SlaUpdateDto? sla;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var details = await ClientService.SLAGETAsync(Id);
+
+            sla = new SlaUpdateDto
+                {
+                    OnsiteHours = details.OnsiteHours,
+                    RemoteHours = details.RemoteHours,
+                    IsHardwareCovered = details.IsHardwareCovered,
+                    MinResponseTime = details.MinResponseTime,
+                    MinResolvedTime = details.MinResolvedTime,
+                    WarrantyTime = details.WarrantyTime
+                   
+                };
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Failed to load SLA update: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (!TimeSpan.TryParse(sla!.MinResponseTime, out _)
+           || !TimeSpan.TryParse(sla.MinResolvedTime, out _))
+        {
+            errorMessage = "Please enter valid time values for response/resolved time in hh:mm:ss format.";
+            return;
+        }
+
+
+        isSubmitting = true;
+
+        try
+        {
+            await ClientService.SLAPUTAsync(Id, sla);
+            successMessage = "✅ SLA updated successfully.";
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/sla");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to update SLA: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    void GoBack() => NavigationManager.NavigateTo("/sla");
+
+
+}

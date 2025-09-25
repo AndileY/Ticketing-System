@@ -1,0 +1,72 @@
+﻿@page "/ticketdetail/details/{Id:int}"
+@inject IClient Client
+@inject NavigationManager Nav
+
+<h3 class="text-3xl font-bold mb-6 text-gray-800">📋 Ticket Detail Info</h3>
+
+@if (model == null)
+{
+    <p class="text-gray-500">Loading...</p>
+}
+else
+{
+    <div class="bg-white rounded-2xl shadow-md p-6 max-w-3xl space-y-4">
+        <div>
+            <strong class="text-gray-600">Ticket ID:</strong>
+            <span>@model.TicketId</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Ticket Title:</strong>
+            <span>@model.TicketTitle</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Client Name:</strong>
+            <span>@model.ClientName</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">User ID:</strong>
+            <span>@model.UserId</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Start Date:</strong>
+            <span>@model.StartDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">End Date:</strong>
+            <span>@model.EndDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Status:</strong>
+            <span class="text-blue-700 font-semibold">@model.Status</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Description:</strong>
+            <p class="mt-1 text-gray-700">@model.Description</p>
+        </div>
+
+        <div class="pt-4">
+            <button class="text-blue-600 hover:underline" @onclick="@(() => Nav.NavigateTo("/ticketdetail"))">
+                ← Back to Ticket Details
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TicketDetailDto? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await Client.TicketDetailGETAsync(Id);
+    }
+}

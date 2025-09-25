@@ -1,0 +1,123 @@
+﻿
+
+@page "/clientaccount/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Create New Client Account</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (showSuccessMessage)
+{
+    <div class="alert alert-success">
+        ✅ Your account has been created. Please wait for admin approval.
+    </div>
+}
+else
+{
+    <EditForm Model="clientAccount" OnValidSubmit="HandleCreate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group mb-2">
+            <label>First Name</label>
+            <InputText @bind-Value="clientAccount.FirstName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Surname</label>
+            <InputText @bind-Value="clientAccount.LastName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Company</label>
+            <InputSelect @bind-Value="clientAccount.CompanyId" class="form-control">
+                <option value="">-- Select a company --</option>
+                @if (companies != null)
+                {
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company.CompanyId">@company.CompanyName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Email</label>
+            <InputText @bind-Value="clientAccount.Email" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Telephone</label>
+            <InputText @bind-Value="clientAccount.Telephone" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Address</label>
+            <InputText @bind-Value="clientAccount.Address" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>QuickBooks UID</label>
+            <InputText @bind-Value="clientAccount.QuickBooksUid" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>SLA ID</label>
+            <InputNumber @bind-Value="clientAccount.Slaid" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @(isSubmitting ? "Creating..." : "Create")
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private ClientAccountCreateDto clientAccount = new();
+    private string? errorMessage;
+    private bool showSuccessMessage = false;
+    private bool isSubmitting = false;
+
+    private List<CompaniesReadOnly>? companies;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            companies = (await ClientService.CompaniesAllAsync()).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load companies: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreate()
+    {
+        isSubmitting = true;
+        try
+        {
+            await ClientService.ClientAccountPOSTAsync(clientAccount);
+
+            showSuccessMessage = true;
+            errorMessage = null;
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = "❌ Failed to create client: " + ex.Message;
+            showSuccessMessage = false;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/");
+}

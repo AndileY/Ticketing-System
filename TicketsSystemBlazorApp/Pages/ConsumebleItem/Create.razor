@@ -1,0 +1,68 @@
+﻿@page "/consumebleitem/create"
+@inject IClient Client
+@inject NavigationManager NavigationManager
+
+<h3>Create New Consumable Item</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<EditForm Model="item" OnValidSubmit="HandleCreate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="name">Name</label>
+        <InputText id="name" class="form-control" @bind-Value="item.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label for="desc">Description</label>
+        <InputText id="desc" class="form-control" @bind-Value="item.Description" />
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">Create</button>
+    <button class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    private ConsumebleItemCreateDto item = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSubmitting = false;
+
+    private async Task HandleCreate()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            await Client.ConsumebleItemPOSTAsync(item);
+            successMessage = "✅ Consumable item created successfully!";
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/consumebleitem");
+            StateHasChanged();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to create: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/consumebleitem");
+    }
+}

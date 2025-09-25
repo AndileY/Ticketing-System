@@ -1,0 +1,119 @@
+﻿@page "/clientaccount"
+@using TicketSystemWebApi.Models.ClientAccount
+@inject ClientAccountService ClientAccountService
+@inject IClient ClientService
+@inject AuthenticationStateProvider AuthProvider
+
+<h3>Client Accounts</h3>
+
+@if (isLoading)
+{
+    <p>Loading client accounts...</p>
+}
+else if (isAdmin)
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Company</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in clientAccounts)
+            {
+                <tr>
+                    <td>@client.FirstName @client.LastName</td>
+                    <td>@client.Email</td>
+                    <td>@GetCompanyName(client.CompanyId)</td>
+                    <td>
+                        <div class="btn-group">
+                            <a class="btn btn-outline-info btn-sm" href="/clientaccount/details/@client.ClientAccountId" title="View">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            <a class="btn btn-outline-warning btn-sm" href="/clientaccount/update/@client.ClientAccountId" title="Edit">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm" title="Delete" @onclick="() => ConfirmDelete(client.ClientAccountId)">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (clientAccount != null)
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">@clientAccount.FirstName @clientAccount.LastName</h5>
+            <p><strong>Email:</strong> @clientAccount.Email</p>
+            <p><strong>Telephone:</strong> @clientAccount.Telephone</p>
+            <p><strong>Address:</strong> @clientAccount.Address</p>
+            <p><strong>Company:</strong> @GetCompanyName(clientAccount.CompanyId)</p>
+            <a class="btn btn-outline-info" href="/clientaccount/details/@clientAccount.ClientAccountId">
+                View My Profile
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <p>No client account found.</p>
+}
+
+@code {
+    private bool isAdmin = false;
+    private bool isLoading = true;
+
+    private List<ClientAccountReadOnlyDto> clientAccounts = new();
+    private ClientAccountReadOnlyDto? clientAccount;
+
+    private Dictionary<int, string> companyNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAdmin = user.IsInRole("Admin");
+
+        try
+        {
+            // Load all companies first
+            var companiesList = await ClientService.CompaniesAllAsync();
+            companyNames = companiesList.ToDictionary(c => c.CompanyId, c => c.CompanyName);
+
+            if (isAdmin)
+            {
+                clientAccounts = await ClientAccountService.GetAll();
+            }
+            else
+            {
+                clientAccount = await ClientAccountService.GetMyClientAccount();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+
+        isLoading = false;
+    }
+
+    private string GetCompanyName(int companyId)
+    {
+        return companyNames.TryGetValue(companyId, out var name) ? name : companyId.ToString();
+    }
+
+    private async Task ConfirmDelete(int clientId)
+    {
+        // Add confirmation dialog and delete logic if needed
+        await ClientAccountService.Delete(clientId);
+        clientAccounts.RemoveAll(c => c.ClientAccountId == clientId);
+    }
+}

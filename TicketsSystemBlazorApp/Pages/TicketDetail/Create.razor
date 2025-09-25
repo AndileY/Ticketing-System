@@ -1,0 +1,73 @@
+﻿@page "/ticketdetail/create"
+@inject IClient Client
+@inject NavigationManager Nav
+
+<h3 class="text-3xl font-bold mb-6 text-gray-800">📝 Create Ticket Detail</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleCreate" class="max-w-xl bg-white p-6 rounded-2xl shadow-md space-y-4">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Ticket ID</label>
+        <InputNumber @bind-Value="model.TicketId" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">User ID</label>
+        <InputText @bind-Value="model.UserId" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+        <input type="datetime-local" @bind="model.StartDate" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+        <input type="datetime-local" @bind="model.EndDate" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+
+  @*   <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
+        <InputDate @bind-Value="model.StartDate" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
+        <InputDate @bind-Value="model.EndDate" class="w-full border px-3 py-2 rounded-lg" />
+    </div> *@
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Ticket Status ID</label>
+        <InputNumber @bind-Value="model.TicketStatusId" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+    <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+        <InputTextArea @bind-Value="model.Description" class="w-full border px-3 py-2 rounded-lg" />
+    </div>
+
+    <div class="pt-4 flex justify-between">
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded-lg shadow">
+             Create
+        </button>
+        <button type="button" class="text-gray-600 hover:text-gray-800" @onclick="@(() => Nav.NavigateTo("/ticketdetail"))">
+            Cancel
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    private TicketDetailCreateDto model = new()
+        {
+            StartDate = DateTime.Now,
+            EndDate = DateTime.Now.AddHours(1)
+        };
+
+    private async Task HandleCreate()
+    {
+        await Client.TicketDetailPOSTAsync(model);
+        Nav.NavigateTo("/ticketdetail");
+    }
+}

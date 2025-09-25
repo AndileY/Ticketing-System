@@ -1,0 +1,31 @@
+﻿@page "/profile"
+@using System.Security.Claims;
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Your Profile</h3>
+
+@if (user.Identity?.IsAuthenticated == true)
+{
+    <ul>
+        <li><strong>Name:</strong> @user.Identity.Name</li>
+        <li><strong>Authenticated:</strong> @user.Identity.IsAuthenticated</li>
+        @foreach (var claim in user.Claims)
+        {
+            <li><strong>@claim.Type:</strong> @claim.Value</li>
+        }
+    </ul>
+}
+else
+{
+    <p>You are not logged in.</p>
+}
+
+@code {
+    private ClaimsPrincipal user = new ClaimsPrincipal();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+    }
+}

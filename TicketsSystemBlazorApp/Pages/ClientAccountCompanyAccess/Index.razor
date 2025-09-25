@@ -1,0 +1,98 @@
+﻿@page "/clientaccountcompanyaccess"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Client ↔ Company Access</h3>
+
+<p>
+    <a class="btn btn-primary" href="/clientaccountcompanyaccess/create">
+        <i class="bi bi-plus-circle"></i> Add Access
+    </a>
+</p>
+
+@if (accessList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!accessList.Any())
+{
+    <p>No access records found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Company</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var access in accessList)
+            {
+                <tr>
+            @* @*         <td>@access.ClientAccountId </td>
+                    <td>@access.CompanyId</td> *@ 
+                    <td>@access.ClientFullName</td>
+                    <td>@access.CompanyName</td>
+
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(access.ClientAccountId, access.CompanyId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showConfirm)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove this access?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showConfirm = false">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteConfirmed">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClientAccountCompanyAccessReadOnly>? accessList;
+    private bool showConfirm = false;
+    private int selectedClientId;
+    private int selectedCompanyId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        accessList = (await ClientService.ClientAccountCompanyAccessAllAsync()).ToList();
+    }
+
+    private void ConfirmDelete(int clientId, int companyId)
+    {
+        selectedClientId = clientId;
+        selectedCompanyId = companyId;
+        showConfirm = true;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        await ClientService.ClientAccountCompanyAccessDELETEAsync(selectedClientId, selectedCompanyId);
+        showConfirm = false;
+        await LoadData();
+    }
+}

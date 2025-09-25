@@ -1,0 +1,95 @@
+﻿@page "/ticket/details/{Id:int}"
+@using System.Security.Claims
+@inject IClient TicketService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-2xl font-bold mb-4">Ticket Details</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket details...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600 font-semibold">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p class="text-gray-600">No ticket found.</p>
+}
+else
+{
+    <div class="border rounded-lg shadow-md p-4 bg-white max-w-lg">
+        <p><strong>ID:</strong> @ticket.TicketId</p>
+        <p><strong>Title:</strong> @ticket.Title</p>
+        <p><strong>Description:</strong> @ticket.Description</p>
+        <p><strong>Category:</strong> @ticket.TicketCategoryId</p>
+        <p><strong>Created On:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>Resolved At:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
+        <p><strong>Assigned To:</strong> @(string.IsNullOrEmpty(ticket.AssignToUserId) ? "Unassigned" : ticket.AssignToUserId)</p>
+        <p><strong>Comments:</strong> @ticket.Comments</p>
+    </div>
+
+    <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
+        Back
+    </button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailsDto? ticket;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private string? currentUserId;
+    private string? currentUserRole;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                errorMessage = "You must be logged in to view tickets.";
+                return;
+            }
+
+            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            currentUserRole = user.FindFirst(ClaimTypes.Role)?.Value;
+
+            ticket = await TicketService.TicketGETAsync(Id);
+
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+            // 🔒 Restrict client access: clients can only see their own tickets
+            if (currentUserRole == "Client" && ticket.UserId != currentUserId)
+            {
+                errorMessage = "You are not authorized to view this ticket.";
+                ticket = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/tickets");
+    }
+}
+

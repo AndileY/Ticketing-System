@@ -1,0 +1,150 @@
+﻿@page "/sla"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3 class="mb-4"><i class="bi bi-file-earmark-text-fill"></i> SLA Agreements</h3>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="mb-3 d-flex justify-content-end">
+    <a href="/sla/create" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i> Create New SLA
+    </a>
+</div>
+
+@if (slas == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-dark text-center">
+                    <tr>
+                        <th>Onsite Hours</th>
+                        <th>Remote Hours</th>
+                        <th>Hardware Covered</th>
+                        <th>Min Response</th>
+                        <th>Min Resolved</th>
+                        <th>Warranty (Years)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sla in slas)
+                    {
+                        <tr class="text-center align-middle">
+                            <td>@sla.OnsiteHours</td>
+                            <td>@sla.RemoteHours</td>
+                            <td>
+                                @if (sla.IsHardwareCovered)
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> No</span>
+                                }
+                            </td>
+                            <td>@sla.MinResponseTime</td>
+                            <td>@sla.MinResolvedTime</td>
+                            <td>@sla.WarrantyTime</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a class="btn btn-outline-info btn-sm" title="View" href="/sla/details/@sla.Slaid">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a class="btn btn-outline-warning btn-sm" title="Edit" href="/sla/update/@sla.Slaid">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger btn-sm" title="Delete" @onclick="() => ConfirmDelete(sla.Slaid)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (showConfirmation)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this SLA?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showConfirmation = false">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteConfirmed">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SlaReadOnlyDto>? slas;
+    private string? successMessage;
+    private string? errorMessage;
+
+    private int deleteSlaId;
+    private bool showConfirmation = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSla();
+    }
+
+    private async Task LoadSla()
+    {
+        try
+        {
+            slas = (await ClientService.SLAAllAsync()).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load SLAs: {ex.Message}";
+        }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        deleteSlaId = id;
+        showConfirmation = true;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        try
+        {
+            await ClientService.SLADELETEAsync(deleteSlaId);
+            successMessage = "✅ SLA deleted successfully.";
+            errorMessage = null;
+            showConfirmation = false;
+            await LoadSla();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to delete SLA: {ex.Message}";
+            successMessage = null;
+            showConfirmation = false;
+        }
+    }
+}

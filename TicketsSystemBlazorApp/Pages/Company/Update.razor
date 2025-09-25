@@ -1,0 +1,55 @@
+﻿@page "/company/update/{id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+
+<h3>Update Company</h3>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Company Name</label>
+            <InputText class="form-control" @bind-Value="model.CompanyName" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/company" class="btn btn-secondary ms-2">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    private CompaniesUpdateDto? model;
+    [Parameter]
+    public int id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var data = await ClientService.CompaniesGETAsync(id);
+        model = new CompaniesUpdateDto { CompanyName = data.CompanyName };
+    }
+
+    private async Task HandleUpdate()
+    {
+       
+        try
+        {
+            await ClientService.CompaniesPUTAsync(id, model);
+            // ✅ Force a real page reload to /company
+            await JS.InvokeVoidAsync("eval", "location.href='/company?saved=true'");
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"❌ Failed to update: {ex.Message}");
+        }
+    }
+}
+

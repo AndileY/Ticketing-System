@@ -1,0 +1,98 @@
+﻿@page "/clientaccount/details/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+@inject ClientAccountService ClientAccountService
+
+
+<h3 class="mb-4">Client Account Details</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (clientAccount != null)
+{
+    <div class="card">
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">First Name</dt>
+                <dd class="col-sm-9">@clientAccount.FirstName</dd>
+
+                <dt class="col-sm-3">Last Name</dt>
+                <dd class="col-sm-9">@clientAccount.LastName</dd>
+
+                <dt class="col-sm-3">Company</dt>
+                <dd class="col-sm-9">@GetCompanyName(clientAccount.CompanyId)</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@clientAccount.Email</dd>
+
+                <dt class="col-sm-3">Telephone</dt>
+                <dd class="col-sm-9">@clientAccount.Telephone</dd>
+
+                <dt class="col-sm-3">Address</dt>
+                <dd class="col-sm-9">@clientAccount.Address</dd>
+
+                <dt class="col-sm-3">QuickBooks UID</dt>
+                <dd class="col-sm-9">@clientAccount.QuickBooksUid</dd>
+
+                <dt class="col-sm-3">SLA ID</dt>
+                <dd class="col-sm-9">@clientAccount.Slaid</dd>
+            </dl>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-secondary me-2" @onclick="GoBack">Back</button>
+            <button class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo($"/clientaccount/update/{clientAccount.ClientAccountId}"))">
+                Edit
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ClientAccountDetailsDto? clientAccount;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private Dictionary<int, string> companyNames = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get company list
+            var companiesList = await ClientService.CompaniesAllAsync();
+            companyNames = companiesList.ToDictionary(c => c.CompanyId, c => c.CompanyName);
+
+            clientAccount = await ClientAccountService.GetDetails(Id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load client account: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetCompanyName(int companyId)
+    {
+        return companyNames.TryGetValue(companyId, out var name) ? name : companyId.ToString();
+    }
+
+
+
+
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/clientaccount");
+    }
+}

@@ -1,0 +1,96 @@
+﻿
+
+@page "/"
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container py-4">
+            <h2 class="mb-4">🎫 Welcome to the Ticketing System</h2>
+            <p class="lead">
+                Manage your service agreements and tickets all in one place.
+            </p>
+
+            <div class="row">
+                @if (isClient)
+                {
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-primary shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">My Account</h5>
+                                <button class="btn btn-outline-primary btn-sm" @onclick="@(() => NavigateTo("/myaccount"))">View</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-warning shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-ticket-perforated" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">Tickets</h5>
+                                <button class="btn btn-outline-warning btn-sm" @onclick="@(() => NavigateTo("/ticket"))">Track</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (isAdmin)
+                {
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-success shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-badge" style="font-size: 2rem;"></i>
+                                <h5 class="card-title mt-2">Client Accounts</h5>
+                                <button class="btn btn-outline-success btn-sm" @onclick="@(() => NavigateTo("/clientaccount"))">Manage</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="col-md-3 mb-3">
+                    <div class="card border-dark shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-bar-chart-line" style="font-size: 2rem;"></i>
+                            <h5 class="card-title mt-2">Reports</h5>
+                            <button class="btn btn-outline-dark btn-sm" @onclick="@(() => NavigateTo("/reports"))">View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="container py-4 text-center">
+            <h2>Welcome!</h2>
+            <p>
+                Please <a href="/login">login</a> or <a href="/clientaccount/create">create a client account</a> to access the system.
+            </p>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool isAdmin;
+    private bool isClient;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var claims = user.Claims.ToList();
+            isAdmin = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "Admin");
+            isClient = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "Client");
+        }
+    }
+
+    private void NavigateTo(string url)
+    {
+        NavigationManager.NavigateTo(url);
+    }
+}

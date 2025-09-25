@@ -1,0 +1,53 @@
+﻿@page "/usergroup/details/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3><i class="bi bi-eye-fill"></i> User Group Details</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (group == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">User Group ID</dt>
+        <dd class="col-sm-9">@group.UserGroupId</dd>
+
+        <dt class="col-sm-3">Group Name</dt>
+        <dd class="col-sm-9">@group.GroupName</dd>
+    </dl>
+
+    <button class="btn btn-secondary" @onclick="GoBack">
+        <i class="bi bi-arrow-left-circle"></i> Back to List
+    </button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private UserGroupDetailDto? group;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            group = await ClientService.UserGroupsGETAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load group details: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/usergroup");
+    }
+}
+

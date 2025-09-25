@@ -1,0 +1,65 @@
+﻿@page "/ticketcategory/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Update Ticket Category</h3>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="model.Name" />
+        </div>
+
+        <button class="btn btn-success" type="submit">Save</button>
+        <a href="/ticketcategory" class="btn btn-secondary ms-2">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TicketCategoryUpdateDto? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var category = await ClientService.TicketCategoryGETAsync(Id);
+        model = new TicketCategoryUpdateDto
+            {
+                Name = category.Name
+            };
+    }
+
+    private async Task HandleUpdate()
+    {
+        try
+        {
+            await ClientService.TicketCategoryPUTAsync(Id, model);
+            NavigationManager.NavigateTo("/ticketcategory");
+        }
+        catch (ApiException ex)
+        {
+            if (ex.StatusCode == 204)
+            {
+                // 204 No Content means success in this context
+                NavigationManager.NavigateTo("/ticketcategory");
+            }
+            else
+            {
+                Console.WriteLine($"❌ API error: {ex.StatusCode}");
+                throw;
+            }
+        }
+    }
+
+}
+

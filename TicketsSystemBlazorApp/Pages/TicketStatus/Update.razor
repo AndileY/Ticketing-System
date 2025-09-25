@@ -1,0 +1,54 @@
+﻿@page "/ticketstatus/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager Nav
+
+<h3>Update Ticket Status</h3>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Status</label>
+            <InputText class="form-control" @bind-Value="model.Status" />
+        </div>
+
+        <div class="mb-3">
+            <label>Description</label>
+            <InputTextArea class="form-control" @bind-Value="model.Description" />
+        </div>
+
+        <button class="btn btn-primary">Update</button>
+        <a class="btn btn-secondary ms-2" href="/ticketstatus">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TicketStatusUpdateDto? model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var current = await ClientService.TicketStatusGETAsync(Id);
+        model = new TicketStatusUpdateDto
+            {
+                Status = current.Status,
+                Description = current.Description
+            };
+    }
+
+    private async Task HandleUpdate()
+    {
+        await ClientService.TicketStatusPUTAsync(Id, model);
+        Nav.NavigateTo("/ticketstatus");
+    }
+}
+

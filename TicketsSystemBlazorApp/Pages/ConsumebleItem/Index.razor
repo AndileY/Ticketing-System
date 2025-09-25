@@ -1,0 +1,110 @@
+﻿@page "/consumebleitem"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Consumable Items</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="mb-3">
+    <a href="/consumebleitem/create" class="btn btn-primary">Add New Item</a>
+</div>
+
+@if (items == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.Description</td>
+                    <td>
+                        <a href="/consumebleitem/details/@item.ConsumebleUsedId" class="btn btn-info btn-sm">View</a>
+                        <a href="/consumebleitem/update/@item.ConsumebleUsedId" class="btn btn-warning btn-sm">Edit</a>
+                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(item.ConsumebleUsedId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (confirmDelete)
+{
+    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                </div>
+                <div class="modal-body">Are you sure you want to delete this item?</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => confirmDelete = false">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteConfirmed">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ConsumebleItemReadOnlyDto>? items;
+    private string? errorMessage;
+    private bool confirmDelete = false;
+    private int selectedId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        try
+        {
+            items = (await ClientService.ConsumebleItemAllAsync()).ToList();
+            StateHasChanged();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Failed to load items: {ex.Message}";
+        }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        selectedId = id;
+        confirmDelete = true;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        try
+        {
+            await ClientService.ConsumebleItemDELETEAsync(selectedId);
+            confirmDelete = false;
+            await LoadItems();
+            StateHasChanged();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Delete failed: {ex.Message}";
+        }
+    }
+}
+

@@ -1,0 +1,92 @@
+﻿@page "/consumebledused/update/{Id:int}"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Update Consumebled Used</h3>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="HandleUpdate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label>Consumeble Item ID</label>
+            <InputNumber @bind-Value="model.ConsumebleUsedId" class="form-control" />
+        </div>
+
+        <div class="mb-2">
+            <label>Quantity</label>
+            <InputNumber @bind-Value="model.Quantity" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">Update</button>
+        <button type="button" class="btn btn-secondary" @onclick="GoBack">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ConsumebledUsedUpdateDto? model;
+    private string? successMessage;
+    private string? errorMessage;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var details = await ClientService.ConsumebledUsedGETAsync(Id);
+            model = new ConsumebledUsedUpdateDto
+                {
+                    ConsumebleUsedId = details.ConsumebleUsedId,
+                    Quantity = details.Quantity
+                };
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load data: {ex.Message}";
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        successMessage = null;
+        errorMessage = null;
+        isSubmitting = true;
+
+        try
+        {
+            await ClientService.ConsumebledUsedPUTAsync(Id, model);
+            successMessage = "✅ Updated successfully.";
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/consumebledused");
+            StateHasChanged();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to update: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    void GoBack() => NavigationManager.NavigateTo("/consumebledused");
+}
+

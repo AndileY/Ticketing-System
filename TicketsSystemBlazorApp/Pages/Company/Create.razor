@@ -1,0 +1,40 @@
+﻿@page "/company/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<h3>Create Company</h3>
+
+<EditForm Model="model" OnValidSubmit="HandleCreate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Company Name</label>
+        <InputText class="form-control" @bind-Value="model.CompanyName" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="/company" class="btn btn-secondary ms-2">Cancel</a>
+</EditForm>
+
+@code {
+    private CompaniesCreateDto model = new();
+
+    private async Task HandleCreate()
+    {
+        try
+        {
+            await ClientService.CompaniesPOSTAsync(model);
+            await Task.Delay(1000);
+            // ✅ Force full page reload using JavaScript
+            await JS.InvokeVoidAsync("eval", "location.href='/company?saved=true'");
+
+
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"Failed to create company: {ex.Message}");
+        }
+    }
+}
