@@ -190,11 +190,19 @@ public partial class TicketSystemDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ticket_TicketCategory");
 
-            entity.HasOne<User>()
+            entity.HasOne(e => e.AssignedTo)
                 .WithMany()
-                .HasForeignKey(e => e.AssignToUserId)
+                .HasForeignKey(e => e.AssignToUserId)    // EXACT MATCH with DB column
+                .HasPrincipalKey(u => u.Id)              // Identity primary key
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ticket_AssignToUser");
+
+
+            //entity.HasOne<User>()
+            //    .WithMany()
+            //    .HasForeignKey(e => e.AssignToUserId)
+            //    .OnDelete(DeleteBehavior.ClientSetNull)
+            //    .HasConstraintName("FK_Ticket_AssignToUser");
 
             entity.HasOne<User>()
                 .WithMany()

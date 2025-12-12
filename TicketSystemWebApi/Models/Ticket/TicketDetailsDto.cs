@@ -21,8 +21,11 @@ namespace TicketSystemWebApi.Models.Ticket
         public DateTime? ResolvedAt { get; set; }
 
         public int ClientAccountId { get; set; }
+       public string ClientName { get; set; }
 
         public string? AssignToUserId { get; set; }
+
+        public string? AssignToUserName { get; set; }
 
         public string? Comments { get; set; }
     }

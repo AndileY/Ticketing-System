@@ -18,6 +18,9 @@
 
         public int ClientAccountId { get; set; }
 
+        //public string CategoryName { get; set; } //Added
+        //public string ClientName { get; set; } //Added
+
         public string? AssignToUserId { get; set; }
 
         public string? Comments { get; set; }

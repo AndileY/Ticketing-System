@@ -1,35 +1,278 @@
-﻿@page "/ticket/details/{Id:int}"
+﻿
+
+
+
+@* @page "/ticket/details/{Id:int}"
 @using System.Security.Claims
-@inject IClient TicketService
+@inject TicketServiceWrapper Wrapper
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IClient TicketService
 
 <h3 class="text-2xl font-bold mb-4">Ticket Details</h3>
 
 @if (isLoading)
 {
-    <p>Loading ticket details...</p>
+    <p>Loading ticket...</p>
 }
 else if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="text-red-600 font-semibold">@errorMessage</div>
+    <div class="text-red-600">@errorMessage</div>
 }
 else if (ticket == null)
 {
-    <p class="text-gray-600">No ticket found.</p>
+    <p>No ticket found.</p>
 }
 else
 {
-    <div class="border rounded-lg shadow-md p-4 bg-white max-w-lg">
+    <div class="border rounded-lg shadow-md p-4 bg-white max-w-lg space-y-2">
         <p><strong>ID:</strong> @ticket.TicketId</p>
         <p><strong>Title:</strong> @ticket.Title</p>
         <p><strong>Description:</strong> @ticket.Description</p>
+
+        <p><strong>Client:</strong> @ticket.ClientName</p>
+   
+
         <p><strong>Category:</strong> @ticket.TicketCategoryId</p>
-        <p><strong>Created On:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
-        <p><strong>Resolved At:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
-        <p><strong>Assigned To:</strong> @(string.IsNullOrEmpty(ticket.AssignToUserId) ? "Unassigned" : ticket.AssignToUserId)</p>
+
+        <p><strong>Created:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>Resolved:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
+
+        <p>
+            <strong>Assigned To:</strong>
+            @(string.IsNullOrEmpty(ticket.AssignToUserName) ? "Unassigned" : ticket.AssignToUserName)
+        </p>
+
         <p><strong>Comments:</strong> @ticket.Comments</p>
     </div>
+
+    @if (canAssign)
+    {
+        <div class="mt-4 max-w-lg">
+            <label><strong>Assign to:</strong></label>
+            <div class="d-flex gap-2">
+                <select class="form-control" @bind="selectedAssigneeId">
+                    <option value="">-- Select Assignee --</option>
+                    @foreach (var a in assignees)
+                    {
+                        <option value="@a.Id">@($"{a.FirstName} {a.LastName} ({a.Email})")</option>
+                    }
+                </select>
+
+                <button class="btn btn-primary" @onclick="AssignSelected" disabled="@isAssigning || string.IsNullOrEmpty(selectedAssigneeId)">
+                    @(isAssigning ? "Assigning..." : "Assign")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(assignMessage))
+            {
+                <div class="mt-2 text-success">@assignMessage</div>
+            }
+            @if (!string.IsNullOrEmpty(assignError))
+            {
+                <div class="mt-2 text-danger">@assignError</div>
+            }
+        </div>
+    }
+
+    <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
+        Back
+    </button>
+} *@
+
+@* @code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailsDto? ticket;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private string? currentUserId;
+    private string? currentUserRole;
+
+    private List<UserDto> assignees = new();
+    private string selectedAssigneeId = string.Empty;
+    private bool isAssigning = false;
+    private string assignMessage = string.Empty;
+    private string assignError = string.Empty;
+
+    private bool canAssign => currentUserRole == "Admin" || currentUserRole == "Assignee" || currentUserRole == "FirstLineSupport";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User;
+
+        currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        currentUserRole = user.FindFirst(ClaimTypes.Role)?.Value;
+
+        await LoadTicketAsync();
+
+        if (canAssign)
+            await LoadAssigneesAsync();
+
+        isLoading = false;
+    }
+
+    // private async Task LoadTicketAsync()
+    // {
+    //     try
+    //     {
+    //         ticket = await Wrapper.GetTicketDetailsByIdAsync(Id);
+
+    //         if (ticket == null)
+    //         {
+    //             errorMessage = "Ticket not found.";
+    //             return;
+    //         }
+
+    
+          
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"Error loading ticket: {ex.Message}";
+    //     }
+    // }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await Wrapper.GetTicketDetailsByIdAsync(Id);
+
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+            
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+    }
+
+
+    private async Task LoadAssigneesAsync()
+    {
+        try
+        {
+            assignees = (await TicketService.AssigneesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Failed to load assignees: {ex.Message}";
+        }
+    }
+
+    private async Task AssignSelected()
+    {
+        isAssigning = true;
+        assignMessage = string.Empty;
+        assignError = string.Empty;
+
+        try
+        {
+            await Wrapper.AssignTicketAsync(Id, selectedAssigneeId);
+
+            var a = assignees.FirstOrDefault(x => x.Id == selectedAssigneeId);
+            if (a != null && ticket != null)
+            {
+                ticket.AssignToUserId = a.Id;
+                ticket.AssignToUserName = $"{a.FirstName} {a.LastName}";
+            }
+
+            assignMessage = $"Assigned to {ticket.AssignToUserName}";
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Failed to assign: {ex.Message}";
+        }
+
+        isAssigning = false;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/ticket");
+    }
+}
+ *@
+@*  //this is working down code *@
+@* @page "/ticket/details/{Id:int}"
+@using System.Security.Claims
+@inject TicketServiceWrapper Wrapper
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IClient TicketService
+
+<h3 class="text-2xl font-bold mb-4">Ticket Details</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p>No ticket found.</p>
+}
+else
+{
+    <div class="border rounded-lg shadow-md p-4 bg-white max-w-lg space-y-2">
+        <p><strong>ID:</strong> @ticket.TicketId</p>
+        <p><strong>Title:</strong> @ticket.Title</p>
+        <p><strong>Description:</strong> @ticket.Description</p>
+
+        <p><strong>Client:</strong> @ticket.ClientName</p>
+
+        <p><strong>Category:</strong> @ticket.TicketCategoryId</p>
+
+        <p><strong>Created:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>Resolved:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
+
+        <p>
+            <strong>Assigned To:</strong>
+            @(string.IsNullOrEmpty(ticket.AssignToUserName) ? "Unassigned" : ticket.AssignToUserName)
+        </p>
+
+        <p><strong>Comments:</strong> @ticket.Comments</p>
+    </div>
+
+    @if (canAssign)
+    {
+        <div class="mt-4 max-w-lg">
+            <label><strong>Assign to:</strong></label>
+            <div class="d-flex gap-2">
+                <select class="form-control" @bind="selectedAssigneeId">
+                    <option value="">-- Select Assignee --</option>
+                    @foreach (var a in assignees)
+                    {
+                        <option value="@a.Id">@($"{a.FirstName} {a.LastName} ({a.Email})")</option>
+                    }
+                </select>
+
+                <button class="btn btn-primary" @onclick="AssignSelected" disabled="@isAssigning || string.IsNullOrEmpty(selectedAssigneeId)">
+                    @(isAssigning ? "Assigning..." : "Assign")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(assignMessage))
+            {
+                <div class="mt-2 text-success">@assignMessage</div>
+            }
+            @if (!string.IsNullOrEmpty(assignError))
+            {
+                <div class="mt-2 text-danger">@assignError</div>
+            }
+        </div>
+    }
 
     <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
         Back
@@ -43,26 +286,39 @@ else
     private bool isLoading = true;
     private string? errorMessage;
 
+    private ClaimsPrincipal? currentUser;
     private string? currentUserId;
     private string? currentUserRole;
 
+    private List<UserDto> assignees = new();
+    private string selectedAssigneeId = string.Empty;
+    private bool isAssigning = false;
+    private string assignMessage = string.Empty;
+    private string assignError = string.Empty;
+
+    private bool canAssign => currentUserRole == "Admin" || currentUserRole == "Assignee" || currentUserRole == "FirstLineSupport";
+
     protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUser = auth.User;
+
+        currentUserId = currentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        currentUserRole = currentUser.FindFirst(ClaimTypes.Role)?.Value;
+
+        await LoadTicketAsync();
+
+        if (canAssign)
+            await LoadAssigneesAsync();
+
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
     {
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (!user.Identity?.IsAuthenticated ?? true)
-            {
-                errorMessage = "You must be logged in to view tickets.";
-                return;
-            }
-
-            currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            currentUserRole = user.FindFirst(ClaimTypes.Role)?.Value;
-
-            ticket = await TicketService.TicketGETAsync(Id);
+            ticket = await Wrapper.GetTicketDetailsByIdAsync(Id);
 
             if (ticket == null)
             {
@@ -70,26 +326,165 @@ else
                 return;
             }
 
-            // 🔒 Restrict client access: clients can only see their own tickets
-            if (currentUserRole == "Client" && ticket.UserId != currentUserId)
-            {
-                errorMessage = "You are not authorized to view this ticket.";
-                ticket = null;
-            }
+
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading ticket: {ex.Message}";
         }
-        finally
+    }
+
+    private async Task LoadAssigneesAsync()
+    {
+        try
         {
-            isLoading = false;
+            assignees = (await TicketService.AssigneesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Failed to load assignees: {ex.Message}";
+        }
+    }
+
+    private async Task AssignSelected()
+    {
+        isAssigning = true;
+        assignMessage = string.Empty;
+        assignError = string.Empty;
+
+        try
+        {
+            await Wrapper.AssignTicketAsync(Id, selectedAssigneeId);
+
+            var a = assignees.FirstOrDefault(x => x.Id == selectedAssigneeId);
+            if (a != null && ticket != null)
+            {
+                ticket.AssignToUserId = a.Id;
+                ticket.AssignToUserName = $"{a.FirstName} {a.LastName}";
+            }
+
+            assignMessage = $"Assigned to {ticket.AssignToUserName}";
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Failed to assign: {ex.Message}";
+        }
+
+        isAssigning = false;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/ticket");
+    }
+}
+ *@
+
+@page "/ticket/details/{Id:int}"
+@using System.Security.Claims
+@inject TicketServiceWrapper Wrapper
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-2xl font-bold mb-4">Ticket Details</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p>No ticket found.</p>
+}
+else
+{
+    <div class="border rounded-lg shadow-md p-4 bg-white max-w-lg space-y-2">
+        <p><strong>ID:</strong> @ticket.TicketId</p>
+        <p><strong>Title:</strong> @ticket.Title</p>
+        <p><strong>Description:</strong> @ticket.Description</p>
+
+        <p><strong>Client:</strong> @(client != null ? $"{client.FirstName} {client.LastName}" : "N/A")</p>
+        <p><strong>Category:</strong> @(categoryName ?? "Unknown")</p>
+
+        <p><strong>Created:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>Resolved:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
+        <p><strong>Assigned To:</strong> @(string.IsNullOrEmpty(ticket.AssignToUserName) ? "Unassigned" : ticket.AssignToUserName)</p>
+        <p><strong>Comments:</strong> @(string.IsNullOrEmpty(ticket.Comments) ? "No comments" : ticket.Comments)</p>
+    </div>
+
+    <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
+        Back
+    </button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailsDto? ticket;
+    private List<TicketCategoryReadOnlyDto>? categories;
+    private ClientAccountDetailsDto? client;
+
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private string? categoryName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketAsync();
+        await LoadExtraDataAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await Wrapper.GetTicketByIdAsync(Id);
+
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+            // Load client
+            client = await Wrapper.GetClientAccountByIdAsync(ticket.ClientAccountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+    }
+
+    private async Task LoadExtraDataAsync()
+    {
+        try
+        {
+            if (ticket == null)
+                return;
+
+            // Load all categories
+            var categoryList = await Wrapper.GetTicketCategoriesAsync();
+            categories = categoryList.ToList();
+
+            // Find category name
+            categoryName = categories
+                .FirstOrDefault(c => c.TicketCategoryId == ticket.TicketCategoryId)
+                ?.Name;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading extra data: " + ex.Message);
         }
     }
 
     private void GoBack()
     {
-        NavigationManager.NavigateTo("/tickets");
+        NavigationManager.NavigateTo("/ticket");
     }
 }
-

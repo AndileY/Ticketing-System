@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TicketSystemWebApi.Data;
 
@@ -23,7 +24,14 @@ public partial class Ticket
 
     public string? AssignToUserId { get; set; }
 
+    [ForeignKey("AssignToUserId")]
+    public virtual User? AssignedTo { get; set; }
+
     public string? Comments { get; set; }
+
+    //[ForeignKey("TicketCategoryId")]
+    //public virtual TicketCategory TicketCategory { get; set; }
+
 
     public ClientAccount ClientAccount { get; set; }
     public ICollection<TicketDetail> TicketDetails { get; set; }

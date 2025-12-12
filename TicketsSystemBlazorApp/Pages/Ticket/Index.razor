@@ -1,99 +1,85 @@
 ﻿@page "/ticket"
-@using TicketsSystemBlazorApp.Service.Base
+@using System.Security.Claims
 @inject IClient TicketService
-@inject AuthenticationStateProvider AuthStateProvider
-@inject NavigationManager NavigationManager
 
-<h3 class="text-2xl font-bold mb-4">Tickets</h3>
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-3xl font-bold mb-6">All Tickets</h3>
 
 @if (isLoading)
 {
-    <p>Loading tickets...</p>
+    <p class="text-gray-600">Loading tickets...</p>
 }
 else if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="text-red-600 font-semibold">@errorMessage</div>
+    <div class="text-red-600 font-semibold mb-4">@errorMessage</div>
 }
 else if (tickets == null || !tickets.Any())
 {
-    <p class="text-gray-600">No tickets found.</p>
+    <p class="text-gray-500">No tickets found.</p>
 }
 else
 {
-    <table class="table-auto border-collapse border border-gray-300 w-full">
-        <thead>
-            <tr class="bg-gray-200">
-                <th class="border p-2">ID</th>
-                <th class="border p-2">Title</th>
-                <th class="border p-2">Description</th>
-                <th class="border p-2">Category ID</th>
-                <th class="border p-2">Created At</th>
-                <th class="border p-2">Resolved At</th>
-                <th class="border p-2">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var t in tickets)
-            {
-                <tr>
-                    <td class="border p-2">@t.TicketId</td>
-                    <td class="border p-2">@t.Title</td>
-                    <td class="border p-2">@t.Description</td>
-                    <td class="border p-2">@t.TicketCategoryId</td>
-                    <td class="border p-2">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td class="border p-2">@t.ResolvedAt?.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td class="border p-2">
-                        @if (isAdmin || isFirstLineSupport || isAssignee)
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        @foreach (var t in tickets)
+        {
+            <div class="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 p-5 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-xl font-semibold mb-2">@t.Title</h4>
+                    <p class="text-gray-600 mb-3">@Shorten(t.Description)</p>
+
+                    <div class="flex flex-wrap gap-2 text-sm text-gray-500 mb-3">
+
+                        <!-- ✅ FIXED: Category Name -->
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            Category: @GetCategoryName(t.TicketCategoryId)
+                        </span>
+
+                        <!-- ✅ FIXED: Correct Date Format -->
+                        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                            Created: @t.CreatedAt.ToString("yyyy-MM-dd")
+                        </span>
+
+                        @if (t.ResolvedAt != null)
                         {
-                            <button class="bg-blue-600 text-white px-2 py-1 rounded mr-2" @onclick="() => EditTicket(t.TicketId)">Edit</button>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full">Resolved</span>
                         }
-                        <button class="bg-gray-600 text-white px-2 py-1 rounded" @onclick="() => ViewDetails(t.TicketId)">Details</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                        else
+                        {
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Pending</span>
+                        }
+                    </div>
+                </div>
+
+                <button class="mt-3 bg-blue-600 text-black px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                @onclick="@(() => NavigationManager.NavigateTo($"/ticket/details/{t.TicketId}"))">
+                    View Details
+                </button>
+            </div>
+        }
+    </div>
 }
 
 @code {
     private List<TicketReadOnlyDto> tickets = new();
+    private List<TicketCategoryReadOnlyDto> categories = new();
+
     private bool isLoading = true;
     private string? errorMessage;
-    private string? currentUserId;
-    private string? currentUserRole;
-    private bool isAdmin, isClient, isFirstLineSupport, isAssignee;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+            isLoading = true;
 
-            if (!user.Identity?.IsAuthenticated ?? true)
-            {
-                errorMessage = "You must be logged in to view tickets.";
-                return;
-            }
-
-            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            currentUserRole = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-            isAdmin = currentUserRole == "Admin";
-            isClient = currentUserRole == "Client";
-            isFirstLineSupport = currentUserRole == "FirstLineSupport";
-            isAssignee = currentUserRole == "Assignee";
-
-            var allTickets = await TicketService.TicketAllAsync();
-
-            // Show only client tickets if role is Client
-            tickets = isClient
-                ? allTickets.Where(t => t.UserId == currentUserId).ToList()
-                : allTickets.ToList();
+            tickets = (await TicketService.TicketAllAsync()).ToList();
+            categories = (await TicketService.TicketCategoryAllAsync()).ToList();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error loading tickets: {ex.Message}";
+            errorMessage = $"Failed to load tickets: {ex.Message}";
         }
         finally
         {
@@ -101,8 +87,16 @@ else
         }
     }
 
-    private void EditTicket(int id) => NavigationManager.NavigateTo($"/ticket/update/{id}");
-    private void ViewDetails(int id) => NavigationManager.NavigateTo($"/ticket/details/{id}");
-}
+    private string Shorten(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        return text.Length <= 80 ? text : text.Substring(0, 80) + "...";
+    }
 
+    private string GetCategoryName(int id)
+    {
+        var cat = categories.FirstOrDefault(c => c.TicketCategoryId == id);
+        return cat?.Name ?? "Unknown";
+    }
+}
 

@@ -118,7 +118,7 @@
  *@
 
 
-@inject AuthenticationStateProvider AuthStateProvider
+@* @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @implements IDisposable
 
@@ -137,7 +137,6 @@
 
         @if (isAuthenticated)
         {
-            @* Client links *@
             @if (isClient)
             {
                 <NavLink class="nav-link text-success" href="/ticket/create">Create Ticket</NavLink>
@@ -145,7 +144,7 @@
                 <NavLink class="nav-link text-primary" href="/myaccount">My Account</NavLink>
             }
 
-            @* Admin / Support links *@
+            
             @if (isAdmin || isFirstLineSupport || isAssignee)
             {
                 <NavLink class="nav-link" href="/ticket">All Tickets</NavLink>
@@ -238,3 +237,132 @@
         AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 }
+ *@
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="top-row navbar navbar-expand-lg navbar-dark bg-dark px-4">
+    <a class="navbar-brand fw-bold" href="">🎫 Ticket System</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass sidebar bg-naive p-3">
+    <nav class="nav flex-column">
+
+        <NavLink class="nav-link fw-semibold" href="/" Match="NavLinkMatch.All">
+            <i class="bi bi-house-door"></i> Home
+        </NavLink>
+
+        @if (isAuthenticated)
+        {
+            @* ---------------- Client Links ---------------- *@
+            @if (isClient)
+            {
+                <NavLink class="nav-link text-success" href="/ticket/create">Create Ticket</NavLink>
+                <NavLink class="nav-link" href="/mytickets">My Tickets</NavLink>
+                <NavLink class="nav-link text-primary" href="/myaccount">My Account</NavLink>
+            }
+
+            @* ---------------- Admin / Support Links ---------------- *@
+            @if (isAdmin || isFirstLineSupport || isAssignee)
+            {
+                <NavLink class="nav-link text-success" href="/approve-clients">Approve Clients</NavLink>
+                <NavLink class="nav-link text-warning" href="/ticketapproval">Tickets Waiting for Approval</NavLink>
+                <NavLink class="nav-link" href="/ticket">All Tickets</NavLink>
+                <NavLink class="nav-link text-warning" href="/ticketassignment">Ticket Assignment</NavLink>
+                <NavLink class="nav-link" href="/ticketcategory">Ticket Categories</NavLink>
+                <NavLink class="nav-link" href="/ticketdetail">Ticket Detail</NavLink>
+                <NavLink class="nav-link" href="/ticketstatus">Ticket Status</NavLink>
+                <NavLink class="nav-link" href="/consumebledused">Consumebled Used</NavLink>
+                <NavLink class="nav-link" href="/consumebleitem">Consumable Items</NavLink>
+                <NavLink class="nav-link" href="/sla">SLA Agreements</NavLink>
+                <NavLink class="nav-link" href="/company">Companies</NavLink>
+                <NavLink class="nav-link text-primary" href="/clientaccount">Client Accounts</NavLink>
+                <NavLink class="nav-link text-primary" href="/clientaccountcompanyaccess">Client-Company Access</NavLink>
+                <NavLink class="nav-link text-primary" href="/usergroup">User Groups</NavLink>
+                <NavLink class="nav-link text-info" href="/profile">Profile</NavLink>
+             
+            }
+
+            @* ---------------- Common Authenticated Links ---------------- *@
+            <span class="text-muted mt-3">Welcome, @userName!</span>
+            <NavLink class="nav-link text-warning" href="/change-password">Change Password</NavLink>
+            <NavLink class="nav-link text-danger" href="/logout">Logout</NavLink>
+        }
+        else
+        {
+            @* ---------------- Guest Links ---------------- *@
+            <NavLink class="nav-link text-success" href="/login">Login</NavLink>
+            <NavLink class="nav-link text-primary" href="/clientaccount/create">Create Client Account</NavLink>
+        }
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private bool isAuthenticated = false;
+    private bool isAdmin = false;
+    private bool isClient = false;
+    private bool isFirstLineSupport = false;
+    private bool isAssignee = false;
+    private string userName = string.Empty;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu() => collapseNavMenu = !collapseNavMenu;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthState();
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await CheckAuthState(task);
+        StateHasChanged();
+    }
+
+    private async Task CheckAuthState(Task<AuthenticationState>? task = null)
+    {
+        var authState = task == null
+            ? await AuthStateProvider.GetAuthenticationStateAsync()
+            : await task;
+
+        var user = authState.User;
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (isAuthenticated)
+        {
+            userName = user.Identity?.Name ?? user.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "User";
+
+            var roleClaim = user.Claims.FirstOrDefault(c =>
+                c.Type == System.Security.Claims.ClaimTypes.Role ||
+                c.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase) ||
+                c.Type.Contains("role", StringComparison.OrdinalIgnoreCase));
+
+            isAdmin = roleClaim?.Value == "Admin";
+            isClient = roleClaim?.Value == "Client";
+            isFirstLineSupport = roleClaim?.Value == "FirstLineSupport";
+            isAssignee = roleClaim?.Value == "Assignee";
+        }
+        else
+        {
+            userName = string.Empty;
+            isAdmin = false;
+            isClient = false;
+            isFirstLineSupport = false;
+            isAssignee = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}
+

@@ -1,4 +1,4 @@
-﻿
+﻿@* 
 @page "/myaccount"
 @using TicketSystemWebApi.Models.ClientAccount
 @attribute [Authorize(Roles = "Client")]
@@ -71,5 +71,93 @@ else
     private string GetCompanyName(int companyId)
     {
         return companyNames.TryGetValue(companyId, out var name) ? name : companyId.ToString();
+    }
+}
+
+
+ *@
+
+
+@page "/myaccount"
+@using TicketSystemWebApi.Models.ClientAccount
+@attribute [Authorize(Roles = "Client")]
+@inject ClientAccountService ClientService
+@inject IClient ClientServiceApi
+
+<h3>Client Account Details</h3>
+
+@if (clientAccount == null || slaDetails == null)
+{
+    <p><em>Loading your account...</em></p>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5>@clientAccount.FirstName @clientAccount.LastName</h5>
+            <p><strong>Email:</strong> @clientAccount.Email</p>
+            <p><strong>Telephone:</strong> @clientAccount.Telephone</p>
+            <p><strong>Address:</strong> @clientAccount.Address</p>
+            <p><strong>Company:</strong> @GetCompanyName(clientAccount.CompanyId)</p>
+            <p><strong>QuickBooks UID:</strong> @clientAccount.QuickBooksUid</p>
+
+            <h6>SLA Agreement</h6>
+            <p><strong>SLA Name:</strong> @GetSlaName(clientAccount.Slaid)</p>
+            <p><strong>Onsite Hours:</strong> @slaDetails.OnsiteHours</p>
+            <p><strong>Remote Hours:</strong> @slaDetails.RemoteHours</p>
+            <p><strong>Hardware Covered:</strong> @(slaDetails.IsHardwareCovered ? "Yes" : "No")</p>
+            <p><strong>Min Response Time:</strong> @slaDetails.MinResponseTime</p>
+            <p><strong>Min Resolved Time:</strong> @slaDetails.MinResolvedTime</p>
+            <p><strong>Warranty (Years):</strong> @slaDetails.WarrantyTime</p>
+        </div>
+    </div>
+}
+
+@code {
+    private ClientAccountReadOnlyDto? clientAccount;
+    private SlaDetailsDto? slaDetails; // <-- match the type returned by SLAGETAsync
+
+    private Dictionary<int, string> companyNames = new();
+
+    // Add friendly SLA names
+    private Dictionary<int, string> slaNames = new()
+    {
+        { 1, "First Tech" },
+        { 2, "AdvTech" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientAccount = await ClientService.GetMyClientAccount();
+
+            if (clientAccount == null)
+            {
+                Console.WriteLine("⚠️ ClientAccount is null.");
+                return;
+            }
+
+            // Load SLA details for this client
+            slaDetails = await ClientServiceApi.SLAGETAsync(clientAccount.Slaid);
+
+            // Load company names dictionary if needed
+            var companies = await ClientServiceApi.CompaniesAllAsync();
+            companyNames = companies.ToDictionary(c => c.CompanyId, c => c.CompanyName);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("❌ Error loading client account or SLA: " + ex.Message);
+        }
+    }
+
+    private string GetCompanyName(int companyId)
+    {
+        return companyNames.TryGetValue(companyId, out var name) ? name : companyId.ToString();
+    }
+
+    private string GetSlaName(int slaId)
+    {
+        return slaNames.TryGetValue(slaId, out var name) ? name : $"SLA {slaId}";
     }
 }

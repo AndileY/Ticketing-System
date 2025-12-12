@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Sockets;
 using TicketSystemWebApi.Data;
+using TicketSystemWebApi.Models.Ticket;
 using TicketSystemWebApi.Models.TicketDetail;
 
 namespace TicketSystemWebApi.Controllers
@@ -25,7 +26,7 @@ namespace TicketSystemWebApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TicketDetailReadOnlyDto>>> GetAllTicketDetail()
         {
-            //var ticketdetails = await context.TicketDetails.ToListAsync();
+        
             var ticketdetails = await context.TicketDetails
                  .Include(t => t.Ticket)
                  .ThenInclude(t => t.ClientAccount)
@@ -38,23 +39,41 @@ namespace TicketSystemWebApi.Controllers
    
         }
 
-        //GET /api/TicketDetail/{id}
+       
+
+
+
         [HttpGet("{id}")]
         public async Task<ActionResult<TicketDetailDto>> GetTicketDetail(int id)
         {
-            //var ticketdetail = await context.TicketDetails.FindAsync(id);
-            var ticketdetail = await context.TicketDetails
-                  .Include(t => t.Ticket)
-                  .ThenInclude(t => t.ClientAccount)
-                   .Include(t => t.TicketStatus)
-                  .FirstOrDefaultAsync(t => t.Id == id);
+            var detail = await context.TicketDetails
+                .Include(d => d.Ticket)
+                    .ThenInclude(t => t.AssignedTo)
+                .Include(d => d.Ticket.ClientAccount)
+                .Include(d => d.TicketStatus)
+                .FirstOrDefaultAsync(d => d.Id == id);  // <-- FIXED HERE
 
-            if (ticketdetail == null)
+            if (detail == null)
                 return NotFound();
 
-            var dto = mapper.Map<TicketDetailDto>(ticketdetail);
+            var dto = new TicketDetailDto
+            {
+                TicketDetailsId = detail.TicketDetailsId,
+                TicketId = detail.TicketId,
+                TicketTitle = detail.Ticket.Title,
+                ClientName = detail.Ticket.ClientAccount != null
+                ? $"{detail.Ticket.ClientAccount.FirstName} {detail.Ticket.ClientAccount.LastName}"
+                : "Unknown",
+                UserId = detail.UserId,
+                StartDate = detail.StartDate,
+                EndDate = detail.EndDate,
+                Status = detail.TicketStatus?.Status,
+                Description = detail.Description
+            };
+
             return Ok(dto);
         }
+
 
         //POST /api/TicketDetail
         [HttpPost]
@@ -70,11 +89,6 @@ namespace TicketSystemWebApi.Controllers
             context.TicketDetails.Add(ticketdetail);
             await context.SaveChangesAsync();
 
-            //var readDto = mapper.Map<TicketDetailDto>(ticketdetail);
-            //var fullDetail = await context.TicketDetails
-            //     .Include(t => t.Ticket)
-            //     .ThenInclude(t => t.ClientAccount)
-            //     .FirstOrDefaultAsync(t => t.Id == ticketdetail.Id);
 
             // Reload with related entities (include TicketStatus)
             var fullDetail = await context.TicketDetails
@@ -86,7 +100,6 @@ namespace TicketSystemWebApi.Controllers
             var readDto = mapper.Map<TicketDetailDto>(fullDetail);
             return Ok(readDto);
 
-            //return CreatedAtAction(nameof(GetTicketDetail), new { id = ticketdetail.Id }, readDto);
         }
 
         //PUT /api/TicketDetail/{id}

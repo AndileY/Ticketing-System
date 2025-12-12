@@ -1,4 +1,4 @@
-﻿
+﻿@* 
 
 @page "/clientaccount/create"
 @inject IClient ClientService
@@ -120,4 +120,292 @@ else
     }
 
     private void Cancel() => NavigationManager.NavigateTo("/");
+}
+ *@
+
+@* @page "/clientaccount/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Create New Client Account</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (showSuccessMessage)
+{
+    <div class="alert alert-success">
+        ✅ Your account has been created. Please wait for admin approval.
+    </div>
+}
+else
+{
+    <EditForm Model="clientAccount" OnValidSubmit="HandleCreate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group mb-2">
+            <label>First Name</label>
+            <InputText @bind-Value="clientAccount.FirstName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Surname</label>
+            <InputText @bind-Value="clientAccount.LastName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Company</label>
+            <InputSelect @bind-Value="clientAccount.CompanyId" class="form-control">
+                <option value="">-- Select a company --</option>
+                @if (companies != null)
+                {
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company.CompanyId">@company.CompanyName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Email</label>
+            <InputText @bind-Value="clientAccount.Email" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Telephone</label>
+            <InputText @bind-Value="clientAccount.Telephone" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Address</label>
+            <InputText @bind-Value="clientAccount.Address" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>QuickBooks UID</label>
+            <InputText @bind-Value="clientAccount.QuickBooksUid" class="form-control" />
+        </div>
+
+        <!-- ✅ SLA Dropdown instead of plain number -->
+        <div class="form-group mb-2">
+            <label>SLA Agreement</label>
+            <InputSelect @bind-Value="clientAccount.Slaid" class="form-control">
+                <option value="">-- Select SLA --</option>
+                @if (slaList != null)
+                {
+                    @foreach (var sla in slaList)
+                    {
+                        <option value="@sla.Slaid">
+                            SLA @sla.Slaid - Onsite: @sla.OnsiteHours hrs, Remote: @sla.RemoteHours hrs
+                        </option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @(isSubmitting ? "Creating..." : "Create")
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private ClientAccountCreateDto clientAccount = new();
+    private string? errorMessage;
+    private bool showSuccessMessage = false;
+    private bool isSubmitting = false;
+
+    private List<CompaniesReadOnly>? companies;
+    private List<SlaReadOnlyDto>? slaList;  // ✅ for dropdown
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            companies = (await ClientService.CompaniesAllAsync()).ToList();
+
+            // ✅ Fetch all SLA records for dropdown
+            slaList = (await ClientService.SLAAllAsync()).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load data: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreate()
+    {
+        isSubmitting = true;
+        try
+        {
+            await ClientService.ClientAccountPOSTAsync(clientAccount);
+            showSuccessMessage = true;
+            errorMessage = null;
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = "❌ Failed to create client: " + ex.Message;
+            showSuccessMessage = false;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/");
+} *@
+
+@page "/clientaccount/create"
+@inject IClient ClientService
+@inject NavigationManager NavigationManager
+
+<h3>Create New Client Account</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (showSuccessMessage)
+{
+    <div class="alert alert-success">
+        ✅ Your account has been created. Please wait for admin approval.
+    </div>
+}
+else
+{
+    <EditForm Model="clientAccount" OnValidSubmit="HandleCreate">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group mb-2">
+            <label>First Name</label>
+            <InputText @bind-Value="clientAccount.FirstName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Surname</label>
+            <InputText @bind-Value="clientAccount.LastName" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Company</label>
+            <InputSelect @bind-Value="clientAccount.CompanyId" class="form-control">
+                <option value="">-- Select a company --</option>
+                @if (companies != null)
+                {
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company.CompanyId">@company.CompanyName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Email</label>
+            <InputText @bind-Value="clientAccount.Email" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Telephone</label>
+            <InputText @bind-Value="clientAccount.Telephone" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>Address</label>
+            <InputText @bind-Value="clientAccount.Address" class="form-control" />
+        </div>
+
+        <div class="form-group mb-2">
+            <label>QuickBooks UID</label>
+            <InputText @bind-Value="clientAccount.QuickBooksUid" class="form-control" />
+        </div>
+
+        <!-- ✅ SLA Dropdown with friendly names -->
+        <div class="form-group mb-2">
+            <label>SLA Agreement</label>
+            <InputSelect @bind-Value="clientAccount.Slaid" class="form-control">
+                <option value="">-- Select SLA --</option>
+                @if (slaList != null)
+                {
+                    @foreach (var sla in slaList)
+                    {
+                        <option value="@sla.Slaid">
+                            @GetSlaName(sla.Slaid) - Onsite: @sla.OnsiteHours hrs, Remote: @sla.RemoteHours hrs
+                        </option>
+                    }
+                }
+            </InputSelect>
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @(isSubmitting ? "Creating..." : "Create")
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private ClientAccountCreateDto clientAccount = new();
+    private string? errorMessage;
+    private bool showSuccessMessage = false;
+    private bool isSubmitting = false;
+
+    private List<CompaniesReadOnly>? companies;
+    private List<SlaReadOnlyDto>? slaList;
+
+    // ✅ Friendly SLA names
+    private Dictionary<int, string> slaNames = new()
+    {
+        { 1, "First Tech" },
+        { 2, "AdvTech" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            companies = (await ClientService.CompaniesAllAsync()).ToList();
+
+            // ✅ Fetch all SLA records for dropdown
+            slaList = (await ClientService.SLAAllAsync()).ToList();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"❌ Failed to load data: {ex.Message}";
+        }
+    }
+
+    private async Task HandleCreate()
+    {
+        isSubmitting = true;
+        try
+        {
+            await ClientService.ClientAccountPOSTAsync(clientAccount);
+            showSuccessMessage = true;
+            errorMessage = null;
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = "❌ Failed to create client: " + ex.Message;
+            showSuccessMessage = false;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => NavigationManager.NavigateTo("/");
+
+    private string GetSlaName(int slaId)
+    {
+        return slaNames.TryGetValue(slaId, out var name) ? name : $"SLA {slaId}";
+    }
 }

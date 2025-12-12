@@ -1,4 +1,4 @@
-﻿@page "/ticketdetail/details/{Id:int}"
+﻿@* @page "/ticketdetail/details/{Id:int}"
 @inject IClient Client
 @inject NavigationManager Nav
 
@@ -70,3 +70,268 @@ else
         model = await Client.TicketDetailGETAsync(Id);
     }
 }
+ *@
+
+
+
+@* @page "/ticketdetail/details/{Id:int}"
+@inject IClient Client
+@inject NavigationManager Nav
+
+<h3 class="text-3xl font-bold mb-6 text-gray-800">📋 Ticket Detail Info</h3>
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-red-600 font-semibold">@errorMessage</p>
+}
+else if (model != null)
+{
+    <div class="bg-white rounded-2xl shadow-md p-6 max-w-3xl space-y-4">
+        <div>
+            <strong class="text-gray-600">Ticket ID:</strong>
+            <span>@model.TicketId</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Ticket Title:</strong>
+            <span>@model.TicketTitle</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Client Name:</strong>
+            <span>@model.ClientName</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">User ID:</strong>
+            <span>@model.UserId</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Start Date:</strong>
+            <span>@model.StartDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">End Date:</strong>
+            <span>@model.EndDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Status:</strong>
+            <span class="text-blue-700 font-semibold">@model.Status</span>
+        </div>
+
+        <div>
+            <strong class="text-gray-600">Description:</strong>
+            <p class="mt-1 text-gray-700">@model.Description</p>
+        </div>
+
+        <div class="pt-4">
+            <button class="text-blue-600 hover:underline" @onclick="@(() => Nav.NavigateTo("/ticketdetail"))">
+                ← Back to Ticket Details
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailDto? model;
+    private string errorMessage = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Client.TicketDetailGETAsync(Id);
+
+            model = response;
+        }
+        catch (ApiException ex)
+        {
+            if (ex.StatusCode == 403)
+            {
+                errorMessage = "You are not authorized to view this ticket.";
+            }
+            else if (ex.StatusCode == 404)
+            {
+                errorMessage = "Ticket not found.";
+            }
+            else
+            {
+                errorMessage = "Error loading ticket.";
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+} *@
+
+@* @page "/ticketdetail/details/{Id:int}"
+@inject IClient Client
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-2xl font-bold mb-4">📋 Ticket Detail</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket detail...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p>No ticket detail found.</p>
+}
+else
+{
+    <div class="bg-white rounded-lg shadow p-4 max-w-xl space-y-2">
+        <p><strong>Ticket ID:</strong> @ticket.TicketId</p>
+        <p><strong>User ID:</strong> @ticket.UserId</p>
+        <p><strong>Start Date:</strong> @ticket.StartDate.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>End Date:</strong> @ticket.EndDate.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>Status:</strong> @ticket.TicketStatusId</p>
+        <p><strong>Description:</strong> @ticket.Description</p>
+    </div>
+
+    <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
+        ← Back
+    </button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailDto? ticket;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private string? currentUserId;
+    private string? currentUserRole;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        currentUserId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        currentUserRole = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        await LoadTicketAsync();
+
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await Client.TicketDetailGETAsync(Id); // returns TicketDetailDto
+
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+           
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+            ticket = null;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/ticketdetail");
+    }
+}
+ *@
+
+
+@page "/ticketdetail/details/{Id:int}"
+@* @using TicketsSystemWebApi.Models.TicketDetail *@
+@inject IClient Client
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="text-2xl font-bold mb-4">📋 Ticket Detail</h3>
+
+@if (isLoading)
+{
+    <p>Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="text-red-600">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p>No ticket found.</p>
+}
+else
+{
+    <div class="bg-white rounded-lg shadow p-4 max-w-xl space-y-2">
+        <p><strong>Ticket ID:</strong> @ticket.TicketId</p>
+        <p><strong>Title:</strong> @ticket.TicketTitle</p>
+        <p><strong>Client:</strong> @ticket.ClientName</p>
+        <p><strong>Status:</strong> @ticket.Status</p>
+        <p><strong>Start Date:</strong> @ticket.StartDate.ToString("yyyy-MM-dd HH:mm")</p>
+        <p><strong>End Date:</strong> @(ticket.EndDate == default ? "-" : ticket.EndDate.ToString("yyyy-MM-dd HH:mm"))</p>
+        <p><strong>Description:</strong> @ticket.Description</p>
+    </div>
+
+    <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
+        ← Back
+    </button>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailDto? ticket;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await Client.TicketDetailGETAsync(Id);
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            errorMessage = "Ticket not found.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/ticketdetail");
+    }
+}
+

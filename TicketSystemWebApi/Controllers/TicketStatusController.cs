@@ -1,5 +1,5 @@
 ﻿
-// TicketStatusController.cs
+
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -55,7 +55,7 @@ public class TicketStatusController : ControllerBase
 
         var result = mapper.Map<TicketStatusDetailsDto>(status);
         return Ok(result);
-        //return CreatedAtAction(nameof(GetTicketStatus), new { id = status.TicketStatusId }, result);
+  
     }
 
 

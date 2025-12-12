@@ -16,7 +16,7 @@
 
         public DateTime EndDate { get; set; }
 
-
+        public int TicketStatusId { get; set; }
 
         public string Status { get; set; }  // From TicketStatus.Status
 
