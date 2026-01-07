@@ -18,8 +18,9 @@
 
         public int ClientAccountId { get; set; }
 
-        //public string CategoryName { get; set; } //Added
-        //public string ClientName { get; set; } //Added
+
+        // ✅ Add this
+        public string TicketCategoryName { get; set; } = null!;
 
         public string? AssignToUserId { get; set; }
 

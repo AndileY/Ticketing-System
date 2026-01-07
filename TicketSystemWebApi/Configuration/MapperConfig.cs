@@ -65,21 +65,14 @@ namespace TicketSystemWebApi.Configuration
             //CreateMap<TicketDetailsDto, Ticket>().ReverseMap();
             CreateMap<TicketCreateDto, Ticket>().ReverseMap();
 
-            //CreateMap<Ticket, TicketDetailsDto>()
-            // .ForMember(dest => dest.AssignToUserId, opt => opt.MapFrom(src => src.AssignToUserId))
-            // .ForMember(dest => dest.AssignToUserName,
-            //    opt => opt.MapFrom(src => src.AssignedTo != null
-            //                              ? src.AssignedTo.FirstName + " " + src.AssignedTo.LastName
-            //                              : null));
+            
             CreateMap<Ticket, TicketDetailsDto>()
             .ForMember(dest => dest.AssignToUserName,
                        opt => opt.MapFrom(src => src.AssignedTo != null
                                                    ? src.AssignedTo.FirstName + " " + src.AssignedTo.LastName
                                                    : null));
 
-            //CreateMap<Ticket, TicketReadOnlyDto>()
-            // .ForMember(dest => dest.ClientName, opt => opt.MapFrom(src => src.ClientAccount.FirstName))
-            // .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.TicketCategory.Name));
+       
 
 
 

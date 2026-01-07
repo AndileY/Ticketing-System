@@ -33,22 +33,7 @@ namespace TicketSystemWebApi.Controllers
             var tickets = mapper.Map<IEnumerable<TicketReadOnlyDto>>(ticket);
             return Ok(tickets);
 
-            // var tickets = await context.Tickets
-            //.Include(t => t.ClientAccount)
-            //.Include(t => t.TicketCategory) // important
-            //.Select(t => new TicketReadOnlyDto
-            //{
-            //   TicketId = t.TicketId,
-            //   Title = t.Title,
-            //   Description = t.Description,
-            //   ClientName = t.ClientAccount.FirstName,
-            //   CategoryName = t.TicketCategory.Name,  // <-- map name
-            //   CreatedAt = t.CreatedAt,
-            //   ResolvedAt = t.ResolvedAt
-            //})
-            // .ToListAsync();
-
-            // return Ok(tickets);
+          
         }
 
      
@@ -253,6 +238,155 @@ namespace TicketSystemWebApi.Controllers
             public string LastName { get; set; } = string.Empty;
             public string Email { get; set; } = string.Empty;
         }
+        [Authorize(Roles = "Assignee,FirstLineSupport")]
+        [HttpGet("assigned-to-me")]
+        [ProducesResponseType(typeof(List<TicketReadOnlyDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<List<TicketReadOnlyDto>>> GetTicketsAssignedToMe()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var tickets = await context.Tickets
+                .Where(t => t.AssignToUserId == userId)
+                .Select(t => new TicketReadOnlyDto
+                {
+                    TicketId = t.TicketId,
+                    Title = t.Title,
+                    CreatedAt = t.CreatedAt,
+                    TicketCategoryId = t.TicketCategoryId
+            
+                })
+                .ToListAsync();
+
+            return Ok(tickets);
+        }
+
+
+
+        [HttpPost("{ticketId}/start")]
+        [Authorize(Roles = "Assignee,FirstLineSupport")]
+        public async Task<IActionResult> StartWork(int ticketId)
+        {
+            var ticket = await context.Tickets
+                .Include(t => t.TicketDetails)
+                .FirstOrDefaultAsync(t => t.TicketId == ticketId);
+
+            if (ticket == null)
+                return NotFound("Ticket not found.");
+
+            // Only assigned user can start
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (ticket.AssignToUserId != userId)
+                return Forbid("You are not assigned to this ticket.");
+
+            var inProgressStatus = await context.TicketStatuses
+                .FirstOrDefaultAsync(s => s.Status == "In Progress");
+
+            if (inProgressStatus == null)
+                return BadRequest("Status 'In Progress' not found.");
+
+            context.TicketDetails.Add(new TicketDetail
+            {
+                TicketId = ticket.TicketId,
+                UserId = userId,
+                TicketStatusId = inProgressStatus.TicketStatusId,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow,
+                Description = "Work started on ticket"
+            });
+
+            await context.SaveChangesAsync();
+
+            return Ok("Ticket is now in progress.");
+        }
+
+        [HttpPost("{ticketId}/close")]
+        [Authorize(Roles = "Assignee,FirstLineSupport")]
+        public async Task<IActionResult> CloseTicket(int ticketId)
+        {
+            var ticket = await context.Tickets
+                .Include(t => t.TicketDetails)
+                .FirstOrDefaultAsync(t => t.TicketId == ticketId);
+
+            if (ticket == null)
+                return NotFound("Ticket not found.");
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // ✅ Only the assigned user can close the ticket
+            if (ticket.AssignToUserId != userId)
+                return Forbid("You are not assigned to this ticket.");
+
+            // ✅ Get "Closed" status
+            var closedStatus = await context.TicketStatuses
+                .FirstOrDefaultAsync(s => s.Status == "Closed");
+
+            if (closedStatus == null)
+                return BadRequest("Ticket status 'Closed' not found.");
+
+            // ✅ Add TicketDetail entry
+            var detail = new TicketDetail
+            {
+                TicketId = ticket.TicketId,
+                UserId = userId,
+                TicketStatusId = closedStatus.TicketStatusId,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow,
+                Description = "Ticket closed by assignee"
+            };
+
+            context.TicketDetails.Add(detail);
+
+            // ✅ Optional: mark ticket as resolved (if you use this field)
+            ticket.ResolvedAt = DateTime.UtcNow;
+
+            await context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                TicketId = ticket.TicketId,
+                Message = "Ticket successfully closed."
+            });
+        }
+
+        [HttpPost("{ticketId}/reopen")]
+        [Authorize(Roles = "Client,Admin,FirstLineSupport")]
+        public async Task<IActionResult> ReopenTicket(int ticketId)
+        {
+            var ticket = await context.Tickets
+                .Include(t => t.TicketDetails)
+                .FirstOrDefaultAsync(t => t.TicketId == ticketId);
+
+            if (ticket == null)
+                return NotFound("Ticket not found.");
+
+            var reopenedStatus = await context.TicketStatuses
+                .FirstOrDefaultAsync(s => s.Status == "Reopened");
+
+            if (reopenedStatus == null)
+                return BadRequest("Ticket status 'Reopened' not found.");
+
+            context.TicketDetails.Add(new TicketDetail
+            {
+                TicketId = ticket.TicketId,
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                TicketStatusId = reopenedStatus.TicketStatusId,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow,
+                Description = "Ticket reopened"
+            });
+
+            // 🔁 Reset resolved date
+            ticket.ResolvedAt = null;
+
+            await context.SaveChangesAsync();
+
+            return Ok("Ticket reopened successfully.");
+        }
+
 
 
 

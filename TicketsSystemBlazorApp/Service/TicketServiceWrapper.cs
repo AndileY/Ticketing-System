@@ -269,6 +269,29 @@ namespace TicketsSystemBlazorApp.Service
 
         }
 
+        // ✅ NEW METHOD
+        public async Task<ICollection<TicketReadOnlyDto>> GetAssignedTicketsAsync()
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+                throw new Exception("User is not logged in");
+
+            _client.HttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            try
+            {
+                // Call NSwag-generated method with the correct auth header
+                return await _client.AssignedToMeAsync();
+            }
+            catch (ApiException ex)
+            {
+                Console.WriteLine("Error fetching assigned tickets: " + ex.Message);
+                return new List<TicketReadOnlyDto>();
+            }
+        }
+
+
         // Fetch a single client account by ID
         public async Task<ClientAccountDetailsDto?> GetClientAccountByIdAsync(int id)
         {
@@ -282,11 +305,48 @@ namespace TicketsSystemBlazorApp.Service
             return await _client.ClientAccountGETAsync(id);
         }
 
-       
+        
+        // Start ticket
+        public async Task StartTicketAsync(int ticketId)
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+                throw new Exception("User is not logged in");
 
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/Ticket/{ticketId}/start");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
+            var response = await _client.HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode(); // throws if 4xx/5xx
+        }
 
+        // Close ticket
+        public async Task CloseTicketAsync(int ticketId)
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+                throw new Exception("User is not logged in");
 
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/Ticket/{ticketId}/close");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _client.HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+        }
+
+        // Reopen ticket
+        public async Task ReopenTicketAsync(int ticketId)
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+                throw new Exception("User is not logged in");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/Ticket/{ticketId}/reopen");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _client.HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+        }
 
     }
 }
