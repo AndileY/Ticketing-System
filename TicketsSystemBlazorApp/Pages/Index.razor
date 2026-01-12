@@ -1,6 +1,6 @@
 ﻿
 
-@page "/"
+@* @page "/"
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -70,9 +70,9 @@
             </p>
         </div>
     </NotAuthorized>
-</AuthorizeView>
+</AuthorizeView> *@
 
-@code {
+@* @code {
     private bool isAdmin;
     private bool isClient;
 
@@ -94,3 +94,147 @@
         NavigationManager.NavigateTo(url);
     }
 }
+ *@
+
+@page "/"
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container py-5">
+            <h1 class="mb-4 text-center text-primary">🎫 Welcome to the Ticketing System</h1>
+            <p class="lead text-center mb-5">
+                Manage your service agreements and tickets efficiently — everything in one place.
+            </p>
+
+            <div class="row g-4 justify-content-center">
+
+                @if (isAdmin)
+                {
+                    <div class="col-md-3">
+                        <div class="card border-success shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-people-fill display-4 text-success"></i>
+                            <h5 class="mt-2">Clients</h5>
+                            <button class="btn btn-outline-success btn-sm mt-2" @onclick='() => NavigateTo("/clientaccount")' >Manage</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card border-warning shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-ticket-perforated display-4 text-warning"></i>
+                            <h5 class="mt-2">Tickets</h5>
+                            <button class="btn btn-outline-warning btn-sm mt-2" @onclick='() => NavigateTo("/ticket")'>View</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card border-info shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-box-seam display-4 text-info"></i>
+                            <h5 class="mt-2">Consumables</h5>
+                            <button class="btn btn-outline-info btn-sm mt-2" @onclick='() => NavigateTo("/consumebleitem")'>Manage</button>
+                        </div>
+                    </div>
+                }
+
+                @if (isClient)
+                {
+                    <div class="col-md-3">
+                        <div class="card border-primary shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-person-fill display-4 text-primary"></i>
+                            <h5 class="mt-2">My Account</h5>
+                            <button class="btn btn-outline-primary btn-sm mt-2" @onclick='() => NavigateTo("/myaccount")'>View</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card border-warning shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-ticket-perforated display-4 text-warning"></i>
+                            <h5 class="mt-2">My Tickets</h5>
+                            <button class="btn btn-outline-warning btn-sm mt-2" @onclick='() => NavigateTo("/mytickets")'>Track</button>
+                        </div>
+                    </div>
+                }
+
+                @if (isFirstLineSupport)
+                {
+                    <div class="col-md-3">
+                        <div class="card border-warning shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-check2-square display-4 text-warning"></i>
+                            <h5 class="mt-2">Tickets Awaiting Approval</h5>
+                            <button class="btn btn-outline-warning btn-sm mt-2" @onclick='() => NavigateTo("/ticketapproval")'>View</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="card border-warning shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-person-lines-fill display-4 text-warning"></i>
+                            <h5 class="mt-2">Ticket Assignment</h5>
+                            <button class="btn btn-outline-warning btn-sm mt-2" @onclick='() => NavigateTo("/ticketassignment")'>Manage</button>
+                        </div>
+                    </div>
+                }
+
+                @if (isAssignee)
+                {
+                    <div class="col-md-3">
+                        <div class="card border-success shadow-sm h-100 text-center p-3">
+                            <i class="bi bi-hourglass-split display-4 text-success"></i>
+                            <h5 class="mt-2">Assigned Tickets</h5>
+                            <button class="btn btn-outline-success btn-sm mt-2" @onclick='() => NavigateTo("/assignee/tickets")'>View</button>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="container py-5 text-center">
+            <h1 class="text-primary mb-4">Welcome to the Ticketing System!</h1>
+            <p class="lead mb-5">
+                Please log in or create a client account to access our ticketing services.
+            </p>
+
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a class="btn btn-primary btn-lg" href="/login">Login</a>
+                <a class="btn btn-outline-primary btn-lg" href="/clientaccount/create">Create Account</a>
+            </div>
+
+            <div class="mt-5 text-center">
+                <img src="welcome.png" alt="Welcome Illustration" class="img-fluid" style="max-width: 400px;">
+            </div>
+
+
+            
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool isAdmin, isClient, isFirstLineSupport, isAssignee;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            var claims = user.Claims.ToList();
+            isAdmin = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "Admin");
+            isClient = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "Client");
+            isFirstLineSupport = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "FirstLineSupport");
+            isAssignee = claims.Any(c => (c.Type == "role" || c.Type.EndsWith("/role")) && c.Value == "Assignee");
+        }
+    }
+
+    private void NavigateTo(string url)
+    {
+        NavigationManager.NavigateTo(url);
+    }
+}
+
+
+

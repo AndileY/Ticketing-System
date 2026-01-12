@@ -20,7 +20,12 @@
         public string Status { get; set; } // FROM related entity
         public string Description { get; set; }
 
-     
+
+       
+
 
     }
+
+    
+
 }

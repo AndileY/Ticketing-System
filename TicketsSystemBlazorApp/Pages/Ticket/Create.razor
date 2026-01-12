@@ -1,6 +1,6 @@
 ﻿
 
-@page "/ticket/create"
+@* @page "/ticket/create"
 @inject TicketServiceWrapper TicketService
 @inject NavigationManager Navigation
 
@@ -47,9 +47,9 @@
         <button type="submit" class="btn btn-primary me-2">Create Ticket</button>
         <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
     </div>
-</EditForm>
+</EditForm> *@
 
-@code {
+@* @code {
     private TicketCreateDto newTicket = new();
     private List<TicketCategoryReadOnlyDto> categories = new();
     private string? errorMessage;
@@ -86,6 +86,106 @@
 
             
         
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to create ticket: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/ticket");
+    }
+}
+ *@
+@page "/ticket/create"
+@inject TicketServiceWrapper TicketService
+@inject NavigationManager Navigation
+
+<h3 class="fw-bold mb-4">Create New Ticket</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error:</strong> @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card shadow-sm p-4 mb-4">
+    <EditForm Model="newTicket" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger mb-3" />
+
+        <div class="form-floating mb-3">
+            <InputText class="form-control" id="title" @bind-Value="newTicket.Title" placeholder="Enter ticket title" />
+            <label for="title">Title</label>
+            <ValidationMessage For="@(() => newTicket.Title)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <InputTextArea class="form-control" id="description" @bind-Value="newTicket.Description" placeholder="Describe your issue" Rows="5" />
+            <label for="description">Description</label>
+            <ValidationMessage For="@(() => newTicket.Description)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <InputSelect class="form-select" id="category" @bind-Value="newTicket.TicketCategoryId">
+                <option value="0">-- Select Category --</option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.TicketCategoryId">@cat.Name</option>
+                }
+            </InputSelect>
+            <label for="category">Ticket Category</label>
+            <ValidationMessage For="@(() => newTicket.TicketCategoryId)" />
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary flex-fill">Create Ticket</button>
+            <button type="button" class="btn btn-secondary flex-fill" @onclick="Cancel">Cancel</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private TicketCreateDto newTicket = new() { TicketCategoryId = 0 };
+    private List<TicketCategoryReadOnlyDto> categories = new();
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = (await TicketService.GetTicketCategoriesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"⚠️ Failed to load categories: {ex.Message}";
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            await TicketService.CreateTicketAsync(newTicket);
+            successMessage = "✅ Ticket created successfully! Waiting for admin approval...";
+
+            newTicket = new TicketCreateDto() { TicketCategoryId = 0 };
+            StateHasChanged();
         }
         catch (Exception ex)
         {

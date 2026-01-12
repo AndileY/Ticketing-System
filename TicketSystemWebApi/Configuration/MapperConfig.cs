@@ -62,7 +62,7 @@ namespace TicketSystemWebApi.Configuration
             CreateMap<UserGroupReadOnlyDto, UserGroup>().ReverseMap();
             CreateMap<UserGroupUpdateDto, UserGroup>().ReverseMap();
 
-            //CreateMap<TicketDetailsDto, Ticket>().ReverseMap();
+ 
             CreateMap<TicketCreateDto, Ticket>().ReverseMap();
 
             
@@ -72,12 +72,12 @@ namespace TicketSystemWebApi.Configuration
                                                    ? src.AssignedTo.FirstName + " " + src.AssignedTo.LastName
                                                    : null));
 
-       
+
 
 
 
             CreateMap<TicketReadOnlyDto, Ticket>().ReverseMap();
-            CreateMap<TicketUpdateDto, Ticket>().ReverseMap();
+
 
 
 

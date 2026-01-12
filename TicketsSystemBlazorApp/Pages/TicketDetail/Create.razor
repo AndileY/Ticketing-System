@@ -1,4 +1,4 @@
-﻿@page "/ticketdetail/create"
+﻿@* @page "/ticketdetail/create"
 @inject IClient Client
 @inject NavigationManager Nav
 
@@ -28,16 +28,6 @@
     </div>
 
 
-  @*   <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Start Date</label>
-        <InputDate @bind-Value="model.StartDate" class="w-full border px-3 py-2 rounded-lg" />
-    </div>
-
-    <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">End Date</label>
-        <InputDate @bind-Value="model.EndDate" class="w-full border px-3 py-2 rounded-lg" />
-    </div> *@
-
     <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">Ticket Status ID</label>
         <InputNumber @bind-Value="model.TicketStatusId" class="w-full border px-3 py-2 rounded-lg" />
@@ -56,9 +46,9 @@
             Cancel
         </button>
     </div>
-</EditForm>
+</EditForm> *@
 
-@code {
+@* @code {
     private TicketDetailCreateDto model = new()
         {
             StartDate = DateTime.Now,
@@ -68,6 +58,114 @@
     private async Task HandleCreate()
     {
         await Client.TicketDetailPOSTAsync(model);
+        Nav.NavigateTo("/ticketdetail");
+    }
+}
+ *@
+
+@page "/ticketdetail/create"
+@inject IClient Client
+@inject NavigationManager Nav
+
+<h3 class="fw-bold mb-4">📝 Create Ticket Detail</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error:</strong> @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card shadow-sm p-4 mb-4">
+    <EditForm Model="model" OnValidSubmit="HandleCreate">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger mb-3" />
+
+        <div class="form-floating mb-3">
+            <InputNumber class="form-control" id="ticketId" @bind-Value="model.TicketId" placeholder="Enter Ticket ID" />
+            <label for="ticketId">Ticket ID</label>
+            <ValidationMessage For="@(() => model.TicketId)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <InputText class="form-control" id="userId" @bind-Value="model.UserId" placeholder="Enter User ID" />
+            <label for="userId">User ID</label>
+            <ValidationMessage For="@(() => model.UserId)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="datetime-local" class="form-control" id="startDate" @bind="model.StartDate" />
+            <label for="startDate">Start Date</label>
+            <ValidationMessage For="@(() => model.StartDate)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="datetime-local" class="form-control" id="endDate" @bind="model.EndDate" />
+            <label for="endDate">End Date</label>
+            <ValidationMessage For="@(() => model.EndDate)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <InputNumber class="form-control" id="statusId" @bind-Value="model.TicketStatusId" placeholder="Enter Status ID" />
+            <label for="statusId">Ticket Status ID</label>
+            <ValidationMessage For="@(() => model.TicketStatusId)" />
+        </div>
+
+        <div class="form-floating mb-3">
+            <InputTextArea class="form-control" id="description" @bind-Value="model.Description" placeholder="Enter details..." rows="5" />
+            <label for="description">Description</label>
+            <ValidationMessage For="@(() => model.Description)" />
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary flex-fill">Create Ticket Detail</button>
+            <button type="button" class="btn btn-secondary flex-fill" @onclick="Cancel">Cancel</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private TicketDetailCreateDto model = new()
+        {
+            StartDate = DateTime.Now,
+            EndDate = DateTime.Now.AddHours(1)
+        };
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task HandleCreate()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            await Client.TicketDetailPOSTAsync(model);
+            successMessage = "✅ Ticket detail created successfully!";
+            model = new TicketDetailCreateDto()
+                {
+                    StartDate = DateTime.Now,
+                    EndDate = DateTime.Now.AddHours(1)
+                };
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to create ticket detail: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
         Nav.NavigateTo("/ticketdetail");
     }
 }

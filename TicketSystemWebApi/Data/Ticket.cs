@@ -29,8 +29,7 @@ public partial class Ticket
 
     public string? Comments { get; set; }
 
-    //[ForeignKey("TicketCategoryId")]
-    //public virtual TicketCategory TicketCategory { get; set; }
+    
 
 
     public ClientAccount ClientAccount { get; set; }

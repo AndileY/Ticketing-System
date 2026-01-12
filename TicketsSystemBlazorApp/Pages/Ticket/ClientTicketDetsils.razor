@@ -1,4 +1,4 @@
-﻿@page "/mytickets/details/{Id:int}"
+﻿@* @page "/mytickets/details/{Id:int}"
 @inject IClient TicketService
 @inject NavigationManager NavigationManager
 
@@ -31,6 +31,92 @@ else
     <button class="bg-gray-600 text-white px-4 py-2 rounded mt-4" @onclick="GoBack">
         ← Back
     </button>
+} *@
+
+@* @code {
+    [Parameter] public int Id { get; set; }
+    private TicketDetailDto? ticket;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await TicketService.TicketDetailGETAsync(Id);
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+            }
+        }
+        catch (ApiException ex) when (ex.StatusCode == 404)
+        {
+            errorMessage = "Ticket not found.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+    }
+
+    private void GoBack() => NavigationManager.NavigateTo("/mytickets");
+}
+ *@
+
+@page "/mytickets/details/{Id:int}"
+@inject IClient TicketService
+@inject NavigationManager NavigationManager
+
+<h3 class="text-2xl font-bold mb-6">📋 Ticket Details</h3>
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p class="text-gray-600">No ticket found.</p>
+}
+else
+{
+    <div class="card shadow-sm p-4 mb-4" style="max-width:600px;">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h5 class="fw-bold mb-0">@ticket.TicketTitle</h5>
+            <span class="@GetStatusBadgeClass(ticket.Status)">@ticket.Status</span>
+        </div>
+
+        <div class="mb-2">
+            <small class="text-muted">Ticket ID: @ticket.TicketId</small><br />
+            <small class="text-muted">Client: @ticket.ClientName</small>
+        </div>
+
+        <div class="mb-2">
+            <strong>Start Date:</strong> @ticket.StartDate.ToString("yyyy-MM-dd HH:mm")<br />
+            <strong>End Date:</strong> @(ticket.EndDate == default ? "-" : ticket.EndDate.ToString("yyyy-MM-dd HH:mm"))
+        </div>
+
+        <div class="mb-2">
+            <strong>Description:</strong>
+            <p class="text-gray-700">@ticket.Description</p>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary" @onclick="GoBack">
+                ← Back
+            </button>
+            @* Future action buttons can go here *@
+        </div>
+    </div>
 }
 
 @code {
@@ -66,4 +152,15 @@ else
     }
 
     private void GoBack() => NavigationManager.NavigateTo("/mytickets");
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "Open" => "badge bg-warning text-dark",
+            "In Progress" => "badge bg-primary",
+            "Closed" => "badge bg-success",
+            _ => "badge bg-secondary"
+        };
+    }
 }

@@ -37,6 +37,17 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
+/*Graph size*/
+.chart-container {
+    width: 450px; /* medium width */
+    height: 280px; /* medium height */
+    margin-bottom: 30px;
+}
+
+
+
+
+
 /* Sidebar Styling */
 .sidebar {
     background-color: navy; /* navy background */

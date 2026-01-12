@@ -1,4 +1,4 @@
-﻿
+﻿@* 
 
 @page "/ticket/details/{Id:int}"
 @using System.Security.Claims
@@ -46,9 +46,9 @@ else
     <button class="bg-gray-600 text-black px-4 py-2 rounded mt-4" @onclick="GoBack">
         Back
     </button>
-}
+} *@
 
-@code {
+@* @code {
     [Parameter] public int Id { get; set; }
 
     private TicketDetailsDto? ticket;
@@ -156,4 +156,179 @@ else
 
 
 
+} *@
+
+@page "/ticket/details/{Id:int}"
+@using System.Security.Claims
+@inject TicketServiceWrapper Wrapper
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3 class="fw-bold mb-4">Ticket Details</h3>
+
+@if (isLoading)
+{
+    <p class="text-muted">Loading ticket...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (ticket == null)
+{
+    <p class="text-muted">No ticket found.</p>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <!-- Card Header: Title + Status -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">@ticket.Title</h5>
+            <span class="badge @(GetStatusBadgeClass(TicketStatus))">@TicketStatus</span>
+        </div>
+
+        <!-- Card Body: Ticket Info -->
+        <div class="card-body">
+            <p><strong>ID:</strong> @ticket.TicketId</p>
+            <p><strong>Description:</strong> @ticket.Description</p>
+            <p><strong>Client:</strong> @(client != null ? $"{client.FirstName} {client.LastName}" : "N/A")</p>
+            <p><strong>Category:</strong> @(categoryName ?? "Unknown")</p>
+            <p><strong>Created:</strong> @ticket.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+            <p><strong>Resolved:</strong> @(ticket.ResolvedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not resolved")</p>
+            <p><strong>Assigned To:</strong> @(string.IsNullOrEmpty(ticket.AssignToUserName) ? "Unassigned" : ticket.AssignToUserName)</p>
+            <p><strong>Comments:</strong> @(string.IsNullOrEmpty(ticket.Comments) ? "No comments" : ticket.Comments)</p>
+        </div>
+
+        <!-- Card Footer: Action Buttons -->
+        <div class="card-footer d-flex gap-2">
+            <button class="btn btn-success" @onclick="StartTicket" disabled="@(!CanStart)">Start</button>
+            <button class="btn btn-danger" @onclick="CloseTicket" disabled="@(!CanClose)">Close</button>
+            <button class="btn btn-primary" @onclick="ReopenTicket" disabled="@(!CanReopen)">Reopen</button>
+            <button class="btn btn-secondary ms-auto" @onclick="GoBack">Back</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailsDto? ticket;
+    private List<TicketCategoryReadOnlyDto>? categories;
+    private ClientAccountDetailsDto? client;
+
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? categoryName;
+
+    // ------------------------
+    // Computed Properties
+    private string TicketStatus => ticket switch
+    {
+        null => "Unknown",
+        _ when ticket.ResolvedAt != null => "Closed",
+        _ when !string.IsNullOrEmpty(ticket.AssignToUserName) => "In Progress",
+        _ => "Open"
+    };
+
+    private bool CanStart => ticket != null && ticket.ResolvedAt == null && string.IsNullOrEmpty(ticket.AssignToUserName);
+    private bool CanClose => ticket != null && ticket.ResolvedAt == null;
+    private bool CanReopen => ticket != null && ticket.ResolvedAt != null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketAsync();
+        await LoadExtraDataAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        try
+        {
+            ticket = await Wrapper.GetTicketByIdAsync(Id);
+
+            if (ticket == null)
+            {
+                errorMessage = "Ticket not found.";
+                return;
+            }
+
+            // Load client
+            client = await Wrapper.GetClientAccountByIdAsync(ticket.ClientAccountId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading ticket: {ex.Message}";
+        }
+    }
+
+    private async Task LoadExtraDataAsync()
+    {
+        try
+        {
+            if (ticket == null) return;
+
+            categories = (await Wrapper.GetTicketCategoriesAsync()).ToList();
+
+            categoryName = categories
+                .FirstOrDefault(c => c.TicketCategoryId == ticket.TicketCategoryId)
+                ?.Name;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading extra data: " + ex.Message);
+        }
+    }
+
+    private void GoBack() => NavigationManager.NavigateTo("/ticket");
+
+    private async Task StartTicket()
+    {
+        try
+        {
+            await Wrapper.StartTicketAsync(ticket!.TicketId);
+            await LoadTicketAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error starting ticket: {ex.Message}";
+        }
+    }
+
+    private async Task CloseTicket()
+    {
+        try
+        {
+            await Wrapper.CloseTicketAsync(ticket!.TicketId);
+            await LoadTicketAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error closing ticket: {ex.Message}";
+        }
+    }
+
+    private async Task ReopenTicket()
+    {
+        try
+        {
+            await Wrapper.ReopenTicketAsync(ticket!.TicketId);
+            await LoadTicketAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error reopening ticket: {ex.Message}";
+        }
+    }
+
+    // ------------------------
+    // Status badge helper
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Open" => "bg-warning text-dark",
+        "In Progress" => "bg-primary",
+        "Closed" => "bg-success",
+        "Reopened" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
 }

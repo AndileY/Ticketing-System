@@ -1,6 +1,6 @@
 ﻿
 
-@page "/ticketapproval"
+@* @page "/ticketapproval"
 @using TicketsSystemBlazorApp.Service
 @inject TicketServiceWrapper TicketService
 @inject NavigationManager Navigation
@@ -64,9 +64,9 @@ else
 @if (!string.IsNullOrWhiteSpace(errorMessage))
 {
     <div class="alert alert-danger mt-3">@errorMessage</div>
-}
+} *@
 
-@code {
+@* @code {
     private List<TicketServiceWrapper.TicketApprovalDto> tickets = new();
     private bool isLoading = true;
     private bool isProcessing = false;
@@ -124,5 +124,130 @@ else
             isProcessing = false;
         }
     }
+} *@
+
+@page "/ticketapproval"
+@using TicketsSystemBlazorApp.Service
+@inject TicketServiceWrapper TicketService
+@inject NavigationManager Navigation
+
+<h3 class="text-2xl font-bold mb-6">📝 Tickets Waiting for Approval</h3>
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading tickets...</p>
 }
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (tickets == null || !tickets.Any())
+{
+    <div class="alert alert-info">
+        ✅ No tickets are waiting for approval.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var t in tickets)
+        {
+            <div class="col">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title fw-bold">@t.Title</h5>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Ticket ID: @t.TicketId</small>
+                            </p>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Client: @t.ClientName</small>
+                            </p>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Category: @t.TicketCategoryName</small>
+                            </p>
+                            <p class="card-text mb-2">
+                                <small class="text-muted">Created: @t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                            </p>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-success btn-sm flex-shrink-0"
+                            @onclick="@(() => ApproveTicket(t.TicketId))"
+                                    disabled="@isProcessing">
+                                @(isProcessing ? "Approving..." : "Approve")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success mt-4">@successMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger mt-4">@errorMessage</div>
+}
+
+@code {
+    private List<TicketServiceWrapper.TicketApprovalDto> tickets = new();
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTickets();
+    }
+
+    private async Task LoadTickets()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            var ticketList = await TicketService.GetTicketsWaitingApprovalAsync();
+            tickets = ticketList.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to load tickets: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveTicket(int ticketId)
+    {
+        isProcessing = true;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+
+        try
+        {
+            await TicketService.ApproveTicketAsync(ticketId);
+            tickets.RemoveAll(t => t.TicketId == ticketId);
+            successMessage = $"✅ Ticket {ticketId} approved successfully!";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to approve ticket {ticketId}: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}
+
 

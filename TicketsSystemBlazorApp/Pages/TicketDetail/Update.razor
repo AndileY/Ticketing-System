@@ -1,4 +1,4 @@
-﻿@page "/ticketdetail/update/{Id:int}"
+﻿@* @page "/ticketdetail/update/{Id:int}"
 @inject IClient Client
 @inject NavigationManager Nav
 
@@ -40,9 +40,9 @@ else
             </button>
         </div>
     </EditForm>
-}
+} *@
 
-@code {
+@* @code {
     [Parameter]
     public int Id { get; set; }
 
@@ -65,3 +65,80 @@ else
         Nav.NavigateTo("/ticketdetail");
     }
 }
+ *@
+
+
+@page "/ticketdetail/update/{Id:int}"
+@inject IClient Client
+@inject NavigationManager Nav
+
+<h3 class="text-3xl font-bold mb-6 text-gray-800">✏️ Update Ticket Detail</h3>
+
+@if (model == null)
+{
+    <p class="text-gray-500">Loading ticket detail...</p>
+}
+else
+{
+    <div class="card shadow-sm rounded-2xl bg-white p-6 max-w-xl mx-auto">
+        <EditForm Model="model" OnValidSubmit="HandleUpdate" class="space-y-4">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-red-600" />
+
+            <!-- Start Date -->
+            <div class="form-floating">
+                <InputDate class="form-control" id="startDate" @bind-Value="model.StartDate" />
+                <label for="startDate">Start Date</label>
+                <ValidationMessage For="@(() => model.StartDate)" class="text-red-600" />
+            </div>
+
+            <!-- End Date -->
+            <div class="form-floating">
+                <InputDate class="form-control" id="endDate" @bind-Value="model.EndDate" />
+                <label for="endDate">End Date</label>
+                <ValidationMessage For="@(() => model.EndDate)" class="text-red-600" />
+            </div>
+
+            <!-- Description -->
+            <div class="form-floating">
+                <InputTextArea class="form-control" id="description" @bind-Value="model.Description" Rows="4" />
+                <label for="description">Description</label>
+                <ValidationMessage For="@(() => model.Description)" class="text-red-600" />
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    💾 Save Changes
+                </button>
+                <button type="button" class="btn btn-secondary flex-fill" @onclick="@(() => Nav.NavigateTo("/ticketdetail"))">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TicketDetailUpdateDto model;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var detail = await Client.TicketDetailGETAsync(Id);
+        model = new TicketDetailUpdateDto
+            {
+                StartDate = detail.StartDate,
+                EndDate = detail.EndDate,
+                Description = detail.Description
+            };
+    }
+
+    private async Task HandleUpdate()
+    {
+        await Client.TicketDetailPUTAsync(Id, model);
+        Nav.NavigateTo("/ticketdetail");
+    }
+}
+

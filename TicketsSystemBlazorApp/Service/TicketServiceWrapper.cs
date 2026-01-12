@@ -348,6 +348,40 @@ namespace TicketsSystemBlazorApp.Service
             response.EnsureSuccessStatusCode();
         }
 
+        public async Task<ICollection<ConsumebleItemReadOnlyDto>> GetAllConsumablesAsync()
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            _client.HttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            return await _client.ConsumebleItemAllAsync(new System.Threading.CancellationToken());
+        }
+
+        public async Task<ICollection<TicketReadOnlyDto>> GetAllTicketsAsync()
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            _client.HttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            return await _client.TicketAllAsync(new System.Threading.CancellationToken());
+        }
+
+
+        public async Task<ICollection<TicketsSystemBlazorApp.Service.Base.TicketDetailReadOnlyDto>>
+          GetAllTicketDetailsAsync()
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+                throw new Exception("User is not logged in");
+
+            _client.HttpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            return await _client.TicketDetailAllAsync(CancellationToken.None);
+        }
+
+
+
     }
 }
 

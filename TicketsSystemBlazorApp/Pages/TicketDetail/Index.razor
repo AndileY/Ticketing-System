@@ -1,4 +1,4 @@
-﻿@page "/ticketdetail"
+﻿@* @page "/ticketdetail"
 @inject IClient Client
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -52,6 +52,201 @@ else
     <button class="bg-blue-600 hover:bg-blue-700 text-black px-5 py-2 rounded-xl shadow" @onclick="@(() => Nav.NavigateTo("/ticketdetail/create"))">
         + Add Ticket Detail
     </button>
+</div> *@
+
+@* @code {
+    private List<TicketDetailReadOnlyDto> ticketDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ticketDetails = (await Client.TicketDetailAllAsync())?.ToList() ?? new();
+    }
+
+    private async Task Delete(int id)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this detail?");
+        if (confirm)
+        {
+            await Client.TicketDetailDELETEAsync(id);
+            ticketDetails = (await Client.TicketDetailAllAsync())?.ToList() ?? new();
+        }
+    }
+} *@
+
+@* @page "/ticketdetail"
+@inject IClient Client
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<h3 class="text-2xl font-bold mb-6 text-gray-800">📝 Ticket Detail Logs</h3>
+
+@if (ticketDetails == null)
+{
+    <p class="text-gray-600">Loading ticket details...</p>
+}
+else if (!ticketDetails.Any())
+{
+    <div class="text-gray-500">No ticket details found.</div>
+}
+else
+{
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        @foreach (var detail in ticketDetails)
+        {
+            <div class="bg-white shadow-md rounded-xl p-4 hover:shadow-lg transition-shadow border border-gray-100">
+                <div class="mb-3">
+                    <h4 class="font-semibold text-lg">Ticket #@detail.TicketId</h4>
+                    <p class="text-gray-500 text-sm">User: @detail.UserId</p>
+                </div>
+
+                <div class="mb-3 text-gray-700">
+                    <p><strong>Start:</strong> @detail.StartDate.ToString("yyyy-MM-dd HH:mm")</p>
+                    <p><strong>End:</strong> @detail.EndDate.ToString("yyyy-MM-dd HH:mm")</p>
+                    <p>
+                        <strong>Status:</strong>
+                        @if (detail.Status.ToLower() == "open")
+                        {
+                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">Open</span>
+                        }
+                        else if (detail.Status.ToLower() == "in progress")
+                        {
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">In Progress</span>
+                        }
+                        else if (detail.Status.ToLower() == "closed")
+                        {
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">Closed</span>
+                        }
+                        else
+                        {
+                            <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-semibold">@detail.Status</span>
+                        }
+                    </p>
+                </div>
+
+                <div class="flex gap-2 mt-3 flex-wrap">
+                    <button class="text-blue-600 hover:underline text-sm" @onclick="@(() => Nav.NavigateTo($"/ticketdetail/details/{detail.Id}"))">
+                        View
+                    </button>
+                    <button class="text-green-600 hover:underline text-sm" @onclick="@(() => Nav.NavigateTo($"/ticketdetail/update/{detail.Id}"))">
+                        Edit
+                    </button>
+                    <button class="text-red-600 hover:underline text-sm" @onclick="@(() => Delete(detail.Id))">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-6">
+    <button class="bg-blue-600 hover:bg-blue-700 text-black px-5 py-2 rounded-xl shadow" @onclick="@(() => Nav.NavigateTo("/ticketdetail/create"))">
+        + Add Ticket Detail
+    </button>
+</div> *@
+
+@* @code {
+    private List<TicketDetailReadOnlyDto> ticketDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ticketDetails = (await Client.TicketDetailAllAsync())?.ToList() ?? new();
+    }
+
+    private async Task Delete(int id)
+    {
+        var confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this detail?");
+        if (confirm)
+        {
+            await Client.TicketDetailDELETEAsync(id);
+            ticketDetails = (await Client.TicketDetailAllAsync())?.ToList() ?? new();
+        }
+    }
+} *@
+
+@page "/ticketdetail"
+@inject IClient Client
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<h3 class="text-2xl font-bold mb-6 text-gray-800">📝 Ticket Detail Logs</h3>
+
+@if (ticketDetails == null)
+{
+    <p class="text-gray-600">Loading ticket details...</p>
+}
+else if (!ticketDetails.Any())
+{
+    <div class="text-gray-500">No ticket details found.</div>
+}
+else
+{
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        @foreach (var detail in ticketDetails)
+        {
+            <div class="bg-white shadow-md rounded-xl p-5 hover:shadow-lg border border-gray-100 transition duration-200">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="font-semibold text-lg">Ticket #@detail.TicketId</h4>
+                    <span class="text-gray-400 text-sm">User: @detail.UserId</span>
+                </div>
+
+                <div class="mb-3 text-gray-700 space-y-1">
+                    <p>
+                        <strong>Start:</strong>
+                        <span title="@detail.StartDate.ToString("F")">@detail.StartDate.ToString("yyyy-MM-dd HH:mm")</span>
+                    </p>
+                    <p>
+                        <strong>End:</strong>
+                        <span title="@detail.EndDate.ToString("F")">@detail.EndDate.ToString("yyyy-MM-dd HH:mm")</span>
+                    </p>
+                    <p>
+                        <strong>Status:</strong>
+                        @switch (detail.Status.ToLower())
+                        {
+                            case "open":
+                                <span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Open
+                                </span>
+                                break;
+                            case "in progress":
+                                <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                    <i class="bi bi-arrow-repeat"></i> In Progress
+                                </span>
+                                break;
+                            case "closed":
+                                <span class="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                    <i class="bi bi-check-circle-fill"></i> Closed
+                                </span>
+                                break;
+                            default:
+                                <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                    @detail.Status
+                                </span>
+                                break;
+                        }
+                    </p>
+                </div>
+
+                <div class="flex gap-3 mt-4">
+                    <button class="text-blue-600 hover:text-blue-800 text-sm transition" @onclick="@(() => Nav.NavigateTo($"/ticketdetail/details/{detail.Id}"))">
+                        <i class="bi bi-eye-fill"></i> View
+                    </button>
+                    <button class="text-green-600 hover:text-green-800 text-sm transition" @onclick="@(() => Nav.NavigateTo($"/ticketdetail/update/{detail.Id}"))">
+                        <i class="bi bi-pencil-fill"></i> Edit
+                    </button>
+                    <button class="text-red-600 hover:text-red-800 text-sm transition" @onclick="@(() => Delete(detail.Id))">
+                        <i class="bi bi-trash-fill"></i> Delete
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-6 flex justify-end">
+    <button class="bg-blue-600 hover:bg-blue-700 text-black px-5 py-2 rounded-xl shadow transition duration-200" @onclick="@(() => Nav.NavigateTo("/ticketdetail/create"))">
+        <i class="bi bi-plus-lg"></i> Add Ticket Detail
+    </button>
 </div>
 
 @code {
@@ -72,3 +267,8 @@ else
         }
     }
 }
+
+
+
+
+

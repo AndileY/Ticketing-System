@@ -7123,6 +7123,9 @@ namespace TicketsSystemBlazorApp.Service.Base
         [Newtonsoft.Json.JsonProperty("clientAccountId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public int ClientAccountId { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("ticketCategoryName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string TicketCategoryName { get; set; }
+
         [Newtonsoft.Json.JsonProperty("assignToUserId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string AssignToUserId { get; set; }
 

@@ -1,6 +1,6 @@
 ﻿
 
-@page "/ticketassignment"
+@* @page "/ticketassignment"
 @inject TicketServiceWrapper TicketService
 @inject NavigationManager Navigation
 
@@ -60,8 +60,8 @@ else
         </tbody>
     </table>
 }
-
-@code {
+ *@
+@* @code {
     private List<TicketServiceWrapper.TicketAssignmentDto> tickets = new();
     private List<TicketServiceWrapper.AssigneeDto> assignees = new();
     private bool isLoading = true;
@@ -104,4 +104,119 @@ else
             errorMessage = $"Failed to assign ticket {ticketId}: {ex.Message}";
         }
     }
+} *@
+
+@page "/ticketassignment"
+@inject TicketServiceWrapper TicketService
+@inject NavigationManager Navigation
+
+<h3 class="text-2xl font-bold mb-6">📝 Ticket Assignment</h3>
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading tickets and assignees...</p>
 }
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (tickets == null || !tickets.Any())
+{
+    <div class="alert alert-info">
+        ✅ No tickets available for assignment.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var t in tickets)
+        {
+            <div class="col">
+                <div class="card shadow-sm h-100 hover-shadow transition-shadow">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title fw-bold">@t.Title</h5>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Ticket ID: @t.TicketId</small>
+                            </p>
+                            <p class="card-text mb-1">
+                                <small class="text-muted">Client: @t.ClientName</small>
+                            </p>
+                            <p class="card-text mb-1">
+                                <small class="badge bg-info text-dark">@t.TicketCategoryName</small>
+                            </p>
+                            <p class="card-text mb-2">
+                                <small class="text-muted">Created: @t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                            </p>
+                        </div>
+
+                        <div class="d-flex flex-column flex-md-row gap-2 mt-3 align-items-start align-items-md-end">
+                            <select class="form-select flex-grow-1" @bind="t.AssigneeUserId">
+                                <option value="">-- Select Assignee --</option>
+                                @foreach (var a in assignees)
+                                {
+                                    <option value="@a.Id">@a.FirstName @a.LastName (@a.Email)</option>
+                                }
+                            </select>
+
+                            <button class="btn btn-primary flex-shrink-0"
+                            @onclick="@(() => AssignTicket(t.TicketId, t.AssigneeUserId))">
+                                Assign
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<TicketServiceWrapper.TicketAssignmentDto> tickets = new();
+    private List<TicketServiceWrapper.AssigneeDto> assignees = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            tickets = (await TicketService.GetTicketsWaitingForAssignmentAsync()).ToList();
+            assignees = (await TicketService.GetAssigneesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"⚠️ Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task AssignTicket(int ticketId, string assigneeUserId)
+    {
+        if (string.IsNullOrEmpty(assigneeUserId))
+        {
+            errorMessage = "Please select an assignee.";
+            return;
+        }
+
+        try
+        {
+            await TicketService.AssignTicketAsync(ticketId, assigneeUserId);
+            tickets.RemoveAll(t => t.TicketId == ticketId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Failed to assign ticket {ticketId}: {ex.Message}";
+        }
+    }
+}
+

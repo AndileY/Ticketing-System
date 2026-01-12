@@ -1,97 +1,7 @@
-﻿@* @page "/mytickets"
-@using TicketsSystemBlazorApp.Service.Base
-@inject IClient TicketService
-@inject AuthenticationStateProvider AuthStateProvider
-@inject NavigationManager NavigationManager
-
-<h3 class="text-2xl font-bold mb-4">🎫 My Tickets</h3>
-
-@if (isLoading)
-{
-    <p>Loading your tickets...</p>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="text-red-600 font-semibold">@errorMessage</div>
-}
-else if (tickets == null || !tickets.Any())
-{
-    <p class="text-gray-600">You haven’t created any tickets yet.</p>
-}
-else
-{
-    <table class="table-auto border-collapse border border-gray-300 w-full">
-        <thead>
-            <tr class="bg-gray-200">
-                <th class="border p-2">ID</th>
-                <th class="border p-2">Title</th>
-                <th class="border p-2">Description</th>
-                <th class="border p-2">Created On</th>
-                <th class="border p-2">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var t in tickets)
-            {
-                <tr>
-                    <td class="border p-2">@t.TicketId</td>
-                    <td class="border p-2">@t.Title</td>
-                    <td class="border p-2">@t.Description</td>
-                    <td class="border p-2">@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td class="border p-2">
-                        <button class="bg-gray-700 text-white px-2 py-1 rounded"
-                                @onclick="() => ViewDetails(t.TicketId)">
-                            Details
-                        </button>
-
-                       
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-
-    
-
-  
-}
-
-@code {
-    private List<TicketReadOnlyDto> tickets = new();
-    private bool isLoading = true;
-    private string? errorMessage;
-    private string? currentUserId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            isLoading = true;
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-            var allTickets = await TicketService.TicketAllAsync();
-            tickets = allTickets.Where(t => t.UserId == currentUserId).ToList();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to load tickets: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void ViewDetails(int id) => NavigationManager.NavigateTo($"/ticket/details/{id}");
+﻿
 
 
-}
- *@
-
-
-@page "/mytickets"
+@* @page "/mytickets"
 @inject IClient TicketService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
@@ -142,8 +52,8 @@ else
         </tbody>
     </table>
 }
-
-@code {
+ *@
+@* @code {
     private List<TicketReadOnlyDto> tickets = new();
     private bool isLoading = true;
     private string? errorMessage;
@@ -171,3 +81,125 @@ else
         }
     }
 }
+ *@
+
+@page "/mytickets"
+@inject IClient TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<h3 class="text-2xl font-bold mb-6">🎫 My Tickets</h3>
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading your tickets...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (tickets == null || !tickets.Any())
+{
+    <p class="text-gray-600">You haven’t created any tickets yet.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var t in tickets)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm hover-shadow" style="cursor: pointer;"
+                @onclick="@(() => GoToDetails(t.TicketId))">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title fw-bold">@t.Title</h5>
+                        <p class="card-text text-muted">@Shorten(t.Description, 80)</p>
+
+                        <div class="mt-auto d-flex flex-wrap gap-2">
+                            <span class="badge bg-primary">
+                                ID: @t.TicketId
+                            </span>
+                            <span class="badge bg-info text-dark">
+                                Created: @t.CreatedAt.ToString("yyyy-MM-dd")
+                            </span>
+                            @if (t.ResolvedAt != null)
+                            {
+                                <span class="badge bg-success">Closed</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Open</span>
+                            }
+                        </div>
+
+                        <button class="btn btn-outline-primary btn-sm mt-3 align-self-start"
+                        @onclick="() => GoToDetails(t.TicketId)"
+                        @onclick:stopPropagation="true">
+                            <i class="bi bi-eye"></i> Details
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    /* Smooth hover shadow for cards */
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        transition: all 0.2s ease-in-out;
+    }
+</style>
+
+@code {
+    private List<TicketReadOnlyDto> tickets = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var allTickets = await TicketService.TicketAllAsync();
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                tickets = allTickets
+                    .Where(t => t.UserId.ToString() == currentUserId)
+                    .ToList();
+            }
+            else
+            {
+                tickets = new List<TicketReadOnlyDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load tickets: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoToDetails(int ticketId)
+    {
+        NavigationManager.NavigateTo($"/mytickets/details/{ticketId}");
+    }
+
+    private string Shorten(string text, int maxLength = 50)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        return text.Length <= maxLength ? text : text.Substring(0, maxLength) + "...";
+    }
+}
+

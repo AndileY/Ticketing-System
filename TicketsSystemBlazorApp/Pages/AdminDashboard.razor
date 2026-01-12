@@ -1,0 +1,160 @@
+﻿
+
+
+
+@page "/admin-dashboard"
+@inject TicketServiceWrapper TicketService
+@inject IJSRuntime JSRuntime
+
+<h1>Admin Dashboard</h1>
+<p>Welcome, @adminEmail!</p>
+
+<hr />
+
+<h3>Tickets by Category</h3>
+@if (ticketsByCategory.Any())
+{
+
+    <div class="chart-container">
+        <canvas id="categoryChart"></canvas>
+    </div>
+
+}
+else
+{
+    <p>No ticket category data available.</p>
+}
+
+<h3>Tickets by Status</h3>
+@if (ticketsByStatus.Any())
+{
+
+    <div class="chart-container">
+        <canvas id="statusChart"></canvas>
+    </div>
+
+}
+else
+{
+    <p>No ticket status data available.</p>
+}
+
+<hr />
+
+<h3>All Tickets</h3>
+@if (tickets.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ticket ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Resolved At</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in tickets)
+            {
+                <tr>
+                    <td>@t.TicketId</td>
+                    <td>@t.Title</td>
+                    <td>@t.TicketCategoryName</td>
+                    <td>
+                        @(ticketLatestStatus.ContainsKey(t.TicketId)
+                            ? ticketLatestStatus[t.TicketId]
+                            : "-")
+                    </td>
+                    <td>@t.CreatedAt.ToLocalTime().ToString("g")</td>
+                    <td>
+                        @(t.ResolvedAt.HasValue
+                            ? t.ResolvedAt.Value.ToLocalTime().ToString("g")
+                            : "-")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No tickets available.</p>
+}
+
+@code {
+
+    private string adminEmail = "admin@gmail.com";
+
+    private List<TicketReadOnlyDto> tickets = new();
+    private List<TicketCategoryReadOnlyDto> ticketCategories = new();
+
+    private List<(string Name, int Count)> ticketsByCategory = new();
+    private List<(string Status, int Count)> ticketsByStatus = new();
+
+    private Dictionary<int, string> ticketLatestStatus = new();
+
+    private bool chartsRendered;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1️⃣ Load base data
+        tickets = (await TicketService.GetAllTicketsAsync()).ToList();
+        ticketCategories = (await TicketService.GetTicketCategoriesAsync()).ToList();
+        var ticketDetails = (await TicketService.GetAllTicketDetailsAsync()).ToList();
+
+        // 2️⃣ Resolve category name for each ticket
+        foreach (var t in tickets)
+        {
+            var category = ticketCategories
+                .FirstOrDefault(c => c.TicketCategoryId == t.TicketCategoryId);
+
+            t.TicketCategoryName = category?.Name ?? "Uncategorized";
+        }
+
+        // 3️⃣ Latest status per ticket
+        ticketLatestStatus = ticketDetails
+            .GroupBy(d => d.TicketId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.StartDate)
+                      .FirstOrDefault()?.Status ?? "Open"
+            );
+
+        // 4️⃣ Category stats
+        ticketsByCategory = tickets
+            .GroupBy(t => t.TicketCategoryName)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
+
+        // 5️⃣ Status stats
+        ticketsByStatus = ticketLatestStatus
+            .GroupBy(s => s.Value)
+            .Select(g => (g.Key, g.Count()))
+            .ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!chartsRendered && ticketsByCategory.Any())
+        {
+            chartsRendered = true;
+
+            await JSRuntime.InvokeVoidAsync(
+                "renderBarChart",
+                "categoryChart",
+                ticketsByCategory.Select(x => x.Name).ToArray(),
+                ticketsByCategory.Select(x => x.Count).ToArray(),
+                "Tickets by Category"
+            );
+
+            await JSRuntime.InvokeVoidAsync(
+                "renderPieChart",
+                "statusChart",
+                ticketsByStatus.Select(x => x.Status).ToArray(),
+                ticketsByStatus.Select(x => x.Count).ToArray()
+            );
+        }
+    }
+}
